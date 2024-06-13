@@ -6,3 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bevy = "0.13"
+bevy_flycam = { git = "https://github.com/sburris0/bevy_flycam" }
+
+[profile.dev.package."*"]
+opt-level = 3
