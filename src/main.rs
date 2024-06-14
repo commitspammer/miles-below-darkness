@@ -6,6 +6,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup_cam)
         .add_systems(Startup, spawn_player)
+        .add_systems(Startup, spawn_map)
         .add_systems(FixedUpdate, player_movement_system)
         .run()
 }
@@ -22,15 +23,34 @@ fn spawn_player(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let shape = meshes.add(Capsule2d::new(15.0, 70.0)).into();
+
     commands.spawn((MaterialMesh2dBundle {
         mesh: shape,
         material: materials.add(Color::GREEN),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        transform: Transform::from_xyz(0.0, 0.0, 1.0),
         ..default()
     },
     Player {
         rotation_speed: 1.0,
     }));
+
+}
+
+fn spawn_map(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+
+    let map = meshes.add(Circle { radius: 50.0 }).into();
+
+
+    // Cria e adiciona um círculo preto ao mundo
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: map,
+        material: materials.add(Color::BLACK),
+        ..default()
+    });
 }
 
 #[derive(Component)]
