@@ -1,33 +1,30 @@
 use bevy::prelude::*;
-use bevy_flycam::{NoCameraPlayerPlugin, FlyCam};
+use bevy::sprite::MaterialMesh2dBundle;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(NoCameraPlayerPlugin)
         .add_systems(Startup, setup_cam)
-        .add_systems(Startup, spawn_cubes)
+        .add_systems(Startup, spawn_player)
         .run()
 }
 
 fn setup_cam(
     mut commands: Commands,
 ) {
-    commands.spawn((Camera3dBundle::default(), FlyCam));
+    commands.spawn(Camera2dBundle::default());
 }
 
-fn spawn_cubes(
+fn spawn_player(
     mut commands: Commands,
-    mut mesh_assets: ResMut<Assets<Mesh>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mesh = mesh_assets.add(shape::Box::new(1., 1., 1.));
-    for x in -10..10 {
-        for z in -10..10 {
-            commands.spawn(PbrBundle {
-                mesh: mesh.clone(),
-                transform: Transform::from_translation(Vec3::new(x as f32 * 2., 0., z as f32 * 2.)),
-                ..Default::default()
-            });
-        }
-    }
+    let shape = meshes.add(Capsule2d::new(25.0, 50.0)).into();
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: shape,
+        material: materials.add(Color::GREEN),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        ..default()
+    });
 }
