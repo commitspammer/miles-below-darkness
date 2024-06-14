@@ -1,9 +1,16 @@
 use bevy::prelude::*;
+use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(1920., 1080.).with_scale_factor_override(1.0),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_systems(Startup, setup_cam)
         .add_systems(Startup, spawn_player)
         .add_systems(Startup, spawn_map)
@@ -27,7 +34,7 @@ fn spawn_player(
     commands.spawn((MaterialMesh2dBundle {
         mesh: shape,
         material: materials.add(Color::GREEN),
-        transform: Transform::from_xyz(0.0, 0.0, 1.0),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..default()
     },
     Player {
@@ -40,15 +47,14 @@ fn spawn_map(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-
-    let map = meshes.add(Circle { radius: 50.0 }).into();
-
-
-    // Cria e adiciona um círculo preto ao mundo
+    let window = windows.single_mut();
+    let map = meshes.add(Circle { radius: window.resolution.height() / 2.0 }).into();
     commands.spawn(MaterialMesh2dBundle {
         mesh: map,
         material: materials.add(Color::BLACK),
+        transform: Transform::from_xyz(0.0, 0.0, -1.0),
         ..default()
     });
 }
