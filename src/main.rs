@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use std::f32::consts::PI;
 
 fn main() {
     App::new()
@@ -14,10 +15,23 @@ fn main() {
         .add_systems(Startup, setup_cam)
         .add_systems(Startup, spawn_player)
         .add_systems(Startup, spawn_map)
-        .add_systems(Startup, spawn_line) // Adicione esta linha
-        .add_systems(FixedUpdate, player_movement_system)
-        .add_systems(FixedUpdate, line_movement_system) // Adicione esta linha
+        .add_systems(Startup, spawn_line)
+        .add_systems(FixedUpdate, player_rotation_system)
+        .add_systems(Update, line_movement_system)
+        .add_systems(Update, line_rotation_system)
         .run()
+}
+
+#[derive(Component)]
+struct Player {
+    rotation_speed: f32,
+}
+
+#[derive(Component)]
+struct Line {
+    movement_speed: f32,
+    rotation_speed: f32,
+    //radian: &mut f32,
 }
 
 fn setup_cam(
@@ -37,6 +51,7 @@ fn spawn_player(
         mesh: shape,
         material: materials.add(Color::GREEN),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        visibility: bevy::render::view::Visibility::Hidden,
         ..default()
     },
     Player {
@@ -61,12 +76,7 @@ fn spawn_map(
     });
 }
 
-#[derive(Component)]
-struct Player {
-    rotation_speed: f32,
-}
-
-fn player_movement_system(
+fn player_rotation_system(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&Player, &mut Transform)>,
@@ -81,11 +91,10 @@ fn player_movement_system(
         rotation_factor -= 1.0;
     }
 
+    //let fw = transform.right();
+    //transform.translation += fw * 64.0 * time.delta_seconds();
     transform.rotate_z(rotation_factor * player.rotation_speed * time.delta_seconds());
 }
-
-#[derive(Component)]
-struct Line;
 
 fn spawn_line(
     mut commands: Commands,
@@ -96,10 +105,10 @@ fn spawn_line(
     let window = windows.single_mut();
     let radius = window.resolution.height() / 2.0; // Raio do mapa
     // A linha tem comprimento igual ao raio para que uma ponta toque o centro e a outra a borda do círculo
-    let line_mesh = Mesh::from(shape::Quad::new(Vec2::new(2.0, radius))); 
+    let line_mesh = Mesh::from(shape::Quad::new(Vec2::new(2.0, radius)));
     let line_handle = meshes.add(line_mesh);
 
-    commands.spawn(MaterialMesh2dBundle {
+    commands.spawn((MaterialMesh2dBundle {
         mesh: line_handle.into(),
         material: materials.add(Color::GREEN),
         transform: Transform {
@@ -108,28 +117,60 @@ fn spawn_line(
             scale: Vec3::ONE,
         },
         ..default()
-    }).insert(Line);
+    }, Line {
+        movement_speed: 12.,
+        rotation_speed: 2.,
+        //radian: 0.,
+    }));
 }
 
 fn line_movement_system(
     time: Res<Time>,
     mut query: Query<(&Line, &mut Transform)>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    for (_, mut transform) in query.iter_mut() {
-        let rotation_speed = 1.0; // Ajuste a velocidade de rotação conforme necessário
-        let angle = rotation_speed * time.delta_seconds();
+    //let (line, mut transform) = query.single_mut();
+    //let right = transform.right();
+    //transform.translation += right * line.movement_speed * time.delta_seconds();
+
+    let (line, mut transform) = query.single_mut();
+
+    transform.rotate_z(-1. * line.rotation_speed * time.delta_seconds());
+    //if transform.rotation.z > 2. * PI * radius { transform.rotation %= 2. * PI * radius }
+
+    let window = windows.single_mut();
+    let radius = window.resolution.height() / 4.0;
+    let (_, radian) = transform.rotation.to_axis_angle();
+    let x = radian.sin() * radius;
+    let y = radian.cos() * radius;
+    *transform = transform.with_translation(Vec3::new(x, y, transform.translation.z));
+
+    //println!("{} {}", transform.rotation.z, transform.rotation.w);
+    println!("{}", radian);
+}
+
+fn line_rotation_system(
+    time: Res<Time>,
+    mut query: Query<(&Line, &mut Transform)>,
+) {
+    //let (line, mut transform) = query.single_mut();
+    //transform.rotate_z(-1.0 * line.rotation_speed * time.delta_seconds());
+
+    //let (line, mut transform) = query.single_mut();
+    //let center = Vec3::ZERO;
+    //let look_at_center = transform.looking_at(center, *transform.local_y());
+    //let incremental_turn_weight = line.rotation_speed * time.delta_seconds();
+    //let old_rotation = transform.rotation;
+    //transform.rotation = old_rotation.lerp(look_at_center.rotation, incremental_turn_weight);
+
+    //let (line, mut transform) = query.single_mut();
+    //let translation = transform.translation.xy();
+    //let center = Transform::from_xyz(0., 0., 0.);
+    //let to_center = (translation - center.translation.xy()).normalize();
+    //let rotation_to_center = Quat::from_rotation_arc(Vec3::Y, to_center.extend(0.));
+    //transform.rotation = rotation_to_center;
+    ////let old_rotation = transform.rotation;
+    ////transform.rotation = old_rotation.lerp(rotation_to_center, line.rotation_speed * time.delta_seconds());
     
-        // Obtém a rotação atual em Euler, adiciona o ângulo, e converte de volta para Quat
-        //let current_rotation_z = transform.rotation.to_euler(EulerRot::XYZ).2;
-        let new_rotation_x = transform.rotation.to_euler(EulerRot::XYZ).2 + angle;
-        transform.rotation = Quat::from_rotation_z(new_rotation_x);
-    
-        // Calcula a nova posição usando cos e sin no ângulo de rotação
-        let radius = transform.translation.length();
-        transform.translation = Vec3::new(
-            radius * new_rotation_x.cos(), 
-            radius * new_rotation_x.sin(), 
-            0.0,
-        );
-    }
+
 }
