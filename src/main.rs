@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
 mod sonar;
+mod torpedo;
 
 fn main() {
     App::new()
@@ -13,6 +14,7 @@ fn main() {
             ..default()
         }))
         .add_plugins(sonar::SonarPlugin)
+        .add_plugins(torpedo::TorpedoPlugin)
         .add_systems(Startup, setup_cam)
         .add_systems(Startup, spawn_player)
         .add_systems(FixedUpdate, player_rotation_system)
@@ -52,6 +54,7 @@ fn player_rotation_system(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&Player, &mut Transform)>,
+    //mut camera: Query<(&Camera, &mut Transform), Without<Player>>,
 ) {
     let (player, mut transform) = query.single_mut();
 
@@ -63,5 +66,7 @@ fn player_rotation_system(
         rotation_factor -= 1.0;
     }
 
+    //let up = transform.up(); //moves the player forward
+    //transform.translation += up * player.rotation_speed * 200. * time.delta_seconds();
     transform.rotate_z(rotation_factor * player.rotation_speed * time.delta_seconds());
 }
