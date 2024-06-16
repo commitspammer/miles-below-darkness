@@ -23,15 +23,28 @@ pub struct Line {
 pub fn spawn_entities(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let window = windows.single_mut();
     let radius = window.resolution.height() / 2.0;
+    let diameter = radius * 2.0; // Diâmetro do círculo
+    let scale = diameter / 1024.0; //
+
+    let texture_handle = asset_server.load("../assets/radar.png");
+
+    commands.spawn(SpriteBundle {
+        texture: texture_handle,
+        transform: Transform::from_xyz(0.0, 0.0, -2.0).with_scale(Vec3::splat(1.25*scale)),
+        ..default()
+    });
+
+
     commands.spawn((
         MaterialMesh2dBundle {
             mesh: meshes.add(Circle { radius: radius }).into(),
-            material: materials.add(Color::BLACK),
+            material: materials.add(Color::NONE),
             transform: Transform::from_xyz(0.0, 0.0, -1.0),
             ..default()
         },

@@ -9,6 +9,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 resolution: WindowResolution::new(1920., 1080.).with_scale_factor_override(1.0),
+                mode: WindowMode::Fullscreen,
                 ..default()
             }),
             ..default()
