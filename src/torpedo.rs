@@ -13,7 +13,6 @@ impl Plugin for TorpedoPlugin {
 #[derive(Component)]
 pub struct Torpedo {
     movement_speed: f32,
-    //...
 }
 
 pub fn spawn_torpedo_system(
@@ -22,10 +21,8 @@ pub fn spawn_torpedo_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut player_query: Query<(&Player, &mut Transform)>,
-    //query player...
 ) {
-    //logic...
-    let (player, mut player_transform) = player_query.single_mut();
+    let (_, player_transform) = player_query.single_mut();
     if keyboard_input.pressed(KeyCode::Space) {
         let shape = meshes.add(Capsule2d::new(3.0, 25.0)).into();
         commands.spawn((
@@ -49,10 +46,8 @@ pub fn spawn_torpedo_system(
 
 pub fn move_torpedo_system(
     time: Res<Time>,
-    mut player_query: Query<(&Player, &mut Transform)>,
-    mut torpedos_query: Query<(&Torpedo, &mut Transform), Without<Player>>
+    mut torpedos_query: Query<(&Torpedo, &mut Transform)>
 ) {
-    let (player, mut player_transform) = player_query.single_mut();
     for (torpedo, mut torpedo_transform) in torpedos_query.iter_mut() {
         let up = torpedo_transform.up();
         torpedo_transform.translation += up * torpedo.movement_speed * time.delta_seconds();
