@@ -17,20 +17,21 @@ pub struct Player {
 
 pub fn spawn_player(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let shape = meshes.add(Capsule2d::new(12.0, 75.0)).into();
-    commands.spawn((MaterialMesh2dBundle {
-        mesh: shape,
-        material: materials.add(Color::GREEN),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        //visibility: bevy::render::view::Visibility::Hidden,
-        ..default()
-    },
-    Player {
-        rotation_speed: 1.0,
-    }));
+    // Carregar a textura
+
+// Substituir o MaterialMesh2dBundle por um SpriteBundle
+commands.spawn(SpriteBundle {
+    texture: asset_server.load("../assets/submarino.png"),
+    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+    ..default()
+})
+.insert(Player {
+    rotation_speed: 1.0,
+});
 }
 
 pub fn player_rotation_system(
