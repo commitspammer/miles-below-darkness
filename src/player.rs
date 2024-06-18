@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-//use bevy::window::*;
+use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
 
 pub struct PlayerPlugin;
@@ -20,13 +20,16 @@ pub fn spawn_player(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    // Carregar a textura
+    let window = windows.single_mut();
+    let radius = window.resolution.height() / 2.0;
+    let diameter = radius * 2.0; 
+    let scale = diameter / 1024.0; 
 
-// Substituir o MaterialMesh2dBundle por um SpriteBundle
 commands.spawn(SpriteBundle {
     texture: asset_server.load("../assets/submarino.png"),
-    transform: Transform::from_xyz(0.0, 0.0, 0.0),
+    transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
     ..default()
 })
 .insert(Player {
