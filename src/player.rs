@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy::window::*;
 //use bevy::sprite::MaterialMesh2dBundle;
+use crate::gamestate::GameState;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_player)
-            .add_systems(FixedUpdate, player_rotation_system);
+        app.add_systems(OnEnter(GameState::Game), spawn_player)
+            .add_systems(Update, player_rotation_system.run_if(in_state(GameState::Game)));
     }
 }
 

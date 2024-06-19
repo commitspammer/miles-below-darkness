@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use crate::gamestate::GameState;
 use crate::player::Player;
 
 pub struct TorpedoPlugin;
 impl Plugin for TorpedoPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, spawn_torpedo_system)
-            .add_systems(Update, move_torpedo_system);
+        app.add_systems(Update, spawn_torpedo_system.run_if(in_state(GameState::Game)))
+            .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)));
     }
 }
 

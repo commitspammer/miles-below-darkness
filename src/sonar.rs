@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
+use crate::gamestate::GameState;
 
 pub struct SonarPlugin;
 impl Plugin for SonarPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_entities)
-            .add_systems(Update, line_spin_system);
+        app.add_systems(OnEnter(GameState::Game), setup_sonar)
+            .add_systems(Update, line_spin_system.run_if(in_state(GameState::Game)));
     }
 }
 
@@ -20,7 +21,7 @@ pub struct Line {
     rotation_speed: f32,
 }
 
-pub fn spawn_entities(
+pub fn setup_sonar(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
