@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::*;
-use bevy::sprite::MaterialMesh2dBundle;
+//use bevy::sprite::MaterialMesh2dBundle;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
@@ -18,8 +18,8 @@ pub struct Player {
 pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    //mut meshes: ResMut<Assets<Mesh>>,
+    //mut materials: ResMut<Assets<ColorMaterial>>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let window = windows.single_mut();
@@ -27,14 +27,14 @@ pub fn spawn_player(
     let diameter = radius * 2.0; 
     let scale = diameter / 1024.0; 
 
-commands.spawn(SpriteBundle {
-    texture: asset_server.load("../assets/submarino.png"),
-    transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
-    ..default()
-})
-.insert(Player {
-    rotation_speed: 1.0,
-});
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("../assets/submarino.png"),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
+        ..default()
+    })
+    .insert(Player {
+        rotation_speed: 1.0,
+    });
 }
 
 pub fn player_rotation_system(
@@ -53,7 +53,5 @@ pub fn player_rotation_system(
         rotation_factor -= 1.0;
     }
 
-    //let up = transform.up(); //moves the player forward
-    //transform.translation += up * player.rotation_speed * 200. * time.delta_seconds();
     transform.rotate_z(rotation_factor * player.rotation_speed * time.delta_seconds());
 }
