@@ -5,6 +5,7 @@ mod sonar;
 mod torpedo;
 mod player;
 mod pause;
+mod enemy;
 
 fn main() {
     App::new()
@@ -20,6 +21,7 @@ fn main() {
         .add_plugins(sonar::SonarPlugin)
         .add_plugins(player::PlayerPlugin)
         .add_plugins(torpedo::TorpedoPlugin)
+        .add_plugins(enemy::EnemyPlugin)
         .add_plugins(pause::PausePlugin)
         .run()
 }
