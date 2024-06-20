@@ -4,12 +4,13 @@ use rand::Rng;
 use bevy::window::*;
 use std::time::Duration;
 use bevy::time::TimerMode;
+use crate::gamestate::GameState;
 
 pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup,spawn_enemy)
-           .add_systems(Update,enemy_movement_system);
+        app.add_systems(OnEnter(GameState::Game), spawn_enemy)
+           .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)));
     }
 }
 
