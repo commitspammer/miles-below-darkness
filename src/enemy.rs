@@ -39,7 +39,7 @@ pub fn spawn_enemy(
         let angle_to_player = direction_to_player.y.atan2(direction_to_player.x);
 
         commands.spawn(SpriteBundle {
-            texture: asset_server.load("../assets/submarino.png"),
+            texture: asset_server.load("../assets/enemy.png"),
             transform: Transform {
                 translation: position,
                 rotation: Quat::from_rotation_z(angle_to_player - std::f32::consts::FRAC_PI_2),
