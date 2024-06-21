@@ -115,7 +115,7 @@ fn menu_action(
                     app_exit_events.send(AppExit);
                 }
                 MenuButtonAction::Play => {
-                    game_state.set(GameState::Game);
+                    game_state.set(GameState::Loading);
                 }
             }
         }

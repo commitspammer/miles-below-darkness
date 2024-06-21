@@ -6,7 +6,7 @@ use crate::gamestate::GameState;
 pub struct SonarPlugin;
 impl Plugin for SonarPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Game), setup_sonar)
+        app.add_systems(OnEnter(GameState::Loading), setup_sonar)
             .add_systems(Update, line_spin_system.run_if(in_state(GameState::Game)));
     }
 }
