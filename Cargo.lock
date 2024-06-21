@@ -511,14 +511,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_flycam"
-version = "0.13.0"
-source = "git+https://github.com/sburris0/bevy_flycam#baffe50e0961ad1491d467fa6ab5551f9f21db8f"
-dependencies = [
- "bevy",
-]
-
-[[package]]
 name = "bevy_gilrs"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2294,7 +2286,6 @@ name = "miles-below-darkness"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_flycam",
  "rand",
 ]
 
