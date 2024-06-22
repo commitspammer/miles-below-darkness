@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy::window::*;
-//use bevy::sprite::MaterialMesh2dBundle;
 use crate::gamestate::GameState;
 
 pub struct PlayerPlugin;
@@ -14,45 +13,59 @@ impl Plugin for PlayerPlugin {
 #[derive(Component)]
 pub struct Player {
     rotation_speed: f32,
+    rotation_acceleration: f32,
+    terminal_rotation_speed: f32,
+    turbine_power: f32,
 }
 
 pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    //mut meshes: ResMut<Assets<Mesh>>,
-    //mut materials: ResMut<Assets<ColorMaterial>>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let window = windows.single_mut();
     let radius = window.resolution.height() / 2.0;
     let diameter = radius * 2.0; 
     let scale = diameter / 1024.0; 
-
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("../assets/submarino.png"),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
-        ..default()
-    })
-    .insert(Player {
-        rotation_speed: 1.0,
-    });
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("../assets/submarino.png"),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
+            ..default()
+        },
+        Player {
+            rotation_speed: 0.0,
+            rotation_acceleration: 0.7,
+            terminal_rotation_speed: 0.7,
+            turbine_power: 1.5,
+        }
+    ));
 }
 
 pub fn player_rotation_system(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&Player, &mut Transform)>,
+    mut query: Query<(&mut Player, &mut Transform)>,
     //mut camera: Query<(&Camera, &mut Transform), Without<Player>>,
 ) {
-    let (player, mut transform) = query.single_mut();
+    let (mut player, mut transform) = query.single_mut();
 
     let mut rotation_factor = 0.0;
-    if keyboard_input.pressed(KeyCode::ArrowLeft) {
-        rotation_factor += 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::ArrowRight) {
-        rotation_factor -= 1.0;
+    if player.rotation_speed != 0.0 {
+        rotation_factor = -player.rotation_speed.signum();
     }
 
-    transform.rotate_z(rotation_factor * player.rotation_speed * time.delta_seconds());
+    if keyboard_input.any_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]) {
+        rotation_factor += player.turbine_power;
+    } else if keyboard_input.any_pressed([KeyCode::ArrowRight, KeyCode::KeyD]) {
+        rotation_factor -= player.turbine_power;
+    } else if player.rotation_speed.abs() < 0.1 {
+        player.rotation_speed = 0.0;
+    }
+
+    if player.rotation_speed.abs() > player.terminal_rotation_speed {
+        player.rotation_speed = player.terminal_rotation_speed * player.rotation_speed.signum();
+    }
+    transform.rotate_z(player.rotation_speed * time.delta_seconds());
+    player.rotation_speed += rotation_factor * player.rotation_acceleration * time.delta_seconds();
 }
