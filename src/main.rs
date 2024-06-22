@@ -5,6 +5,7 @@ mod sonar;
 mod torpedo;
 mod player;
 mod menu;
+mod loading;
 mod pause;
 mod enemy;
 
@@ -22,6 +23,7 @@ fn main() {
         .init_state::<gamestate::GameState>()
         .add_systems(Startup, setup_cam)
         .add_plugins(menu::MenuPlugin)
+        .add_plugins(loading::LoadingPlugin)
         .add_plugins(pause::PausePlugin)
         .add_plugins(sonar::SonarPlugin)
         .add_plugins(player::PlayerPlugin)

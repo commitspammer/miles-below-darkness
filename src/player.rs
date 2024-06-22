@@ -6,7 +6,7 @@ use crate::gamestate::GameState;
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Game), spawn_player)
+        app.add_systems(OnEnter(GameState::Loading), spawn_player)
             .add_systems(Update, player_rotation_system.run_if(in_state(GameState::Game)));
     }
 }
