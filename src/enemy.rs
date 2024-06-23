@@ -5,6 +5,7 @@ use bevy::window::*;
 use std::time::Duration;
 use bevy::time::TimerMode;
 use crate::gamestate::GameState;
+use std::f32::consts::{PI, FRAC_PI_4};
 
 pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
@@ -23,18 +24,36 @@ pub struct Hitbox {
 
 #[derive(Component)]
 pub struct Enemy {
-    rotation_speed: f32,
+    _rotation_speed: f32,
     move_speed: f32,
     move_timer: Timer,
+    patrol_points: Vec<Vec3>,
+    current_patrol_index: usize,
 }
 
-fn create_enemy(rotation_speed: f32, move_speed: f32, move_timer: Timer) -> Enemy {
-    Enemy {
-        rotation_speed,
-        move_speed,
-        move_timer,
+
+// fn create_enemy(rotation_speed: f32, move_speed: f32, move_timer: Timer) -> Enemy {
+//     Enemy {
+//         rotation_speed,
+//         move_speed,
+//         move_timer,
+//     }
+// }
+
+fn generate_patrol_points(center: Vec3, radius: f32, count: usize) -> Vec<Vec3> {
+    let mut points = Vec::new();
+    let angle_increment = std::f32::consts::TAU / count as f32;
+
+    for i in 0..count {
+        let angle = i as f32 * angle_increment;
+        let x = center.x + radius * angle.cos();
+        let y = center.y + radius * angle.sin();
+        points.push(Vec3::new(x, y, 0.0));
     }
+
+    points
 }
+
 
 fn position_is_free(position: Vec3, existing_enemies: &Vec<(Entity, Vec3, Vec2)>) -> bool {
     println!("antes do for, existing_enemies len: {}", existing_enemies.len());
@@ -59,6 +78,8 @@ pub fn spawn_enemy(
 ) {
     let window = windows.single_mut();
     let radius = (window.resolution.height() / 4.0) + 20.0;
+    let patrol_radius = radius + 100.0;
+    let patrol_points = generate_patrol_points(Vec3::ZERO, patrol_radius, 6); // 6 pontos de patrulha
     let mut rng = rand::thread_rng();
 
     let mut existing_enemies: Vec<(Entity, Vec3, Vec2)> = query.iter().map(|(e, t, h)| (e, t.translation, h.size)).collect();
@@ -80,7 +101,6 @@ pub fn spawn_enemy(
         let direction_to_player = Vec3::new(0.0, 0.0, 0.0) - position;
         let angle_to_player = direction_to_player.y.atan2(direction_to_player.x);
 
-        
         let enemy_entity = commands.spawn(SpriteBundle {
             texture: asset_server.load("../assets/enemy.png"),
             transform: Transform {
@@ -91,40 +111,60 @@ pub fn spawn_enemy(
             ..default()
         })
         .insert(Enemy {
-            rotation_speed: rng.gen_range(0.5..2.0),
+            _rotation_speed: rng.gen_range(0.5..2.0),
             move_speed: 10.0,
             move_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
+            patrol_points: patrol_points.clone(),
+            current_patrol_index: 0,
         })
         .insert(Hitbox {
             size: Vec2::new(50.0, 50.0),
         })
         .id();
 
-       
         existing_enemies.push((enemy_entity, position, Vec2::new(50.0, 50.0)));
     }
 }
 
+
 fn enemy_movement_system(
     time: Res<Time>,
     mut query: Query<(&mut Enemy, &mut Transform)>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    let window = windows.single_mut();
-    let distance_limit = (window.resolution.height() / 4.0) + 20.0; // Define a distância limite baseada na altura da janela
-    let origin = Vec3::ZERO; 
-
     for (mut enemy, mut transform) in query.iter_mut() {
         enemy.move_timer.tick(time.delta());
 
         if enemy.move_timer.finished() {
-            let current_distance = transform.translation.distance(origin);
-            if current_distance > distance_limit {
-                let move_distance = enemy.move_speed;
-                let direction_to_origin = (origin - transform.translation).normalize();
-                transform.translation += direction_to_origin * move_distance;
-            } else {
-                //println!("Inimigo dentro da distância limite ou muito próximo ao ponto de origem");
+            let target = enemy.patrol_points[enemy.current_patrol_index];
+            let direction = (target - transform.translation).normalize();
+            let desired_angle = direction.y.atan2(direction.x);
+            let current_angle = transform.rotation.to_euler(EulerRot::XYZ).2; 
+
+            let mut angle_diff = (desired_angle - current_angle).abs();
+            if angle_diff > PI {
+                angle_diff = 2.0 * PI - angle_diff; 
+            }
+
+            let rotation_limit = FRAC_PI_4; 
+            if angle_diff > rotation_limit {
+                angle_diff = angle_diff.signum() * rotation_limit;
+            }
+
+            println!("Enemy position1: {:?}", transform.translation);
+           
+            transform.rotation *= Quat::from_rotation_z(angle_diff);
+
+            println!("Enemy position2: {:?}", transform.translation);
+
+            let forward = transform.forward();
+            let forward_xy = Vec3::new(forward.x, forward.y, 0.0);
+            println!("forward_xy: {:?}", forward_xy);
+            transform.translation += forward_xy * enemy.move_speed * time.delta_seconds();
+
+            println!("Enemy position3: {:?}", transform.translation);
+
+            if transform.translation.distance(target) < 5.0 {
+                enemy.current_patrol_index = (enemy.current_patrol_index + 1) % enemy.patrol_points.len();
             }
 
             enemy.move_timer.reset();
@@ -132,16 +172,17 @@ fn enemy_movement_system(
     }
 }
 
+
 fn collision_detection_system(
-    mut commands: Commands,
+    _commands: Commands,
     query: Query<(Entity, &Transform, &Hitbox)>,
 ) {
     let entities: Vec<(Entity, &Transform, &Hitbox)> = query.iter().collect();
-    for (i, (entity_a, transform_a, hitbox_a)) in entities.iter().enumerate() {
-        for (entity_b, transform_b, hitbox_b) in entities.iter().skip(i + 1) {
+    for (i, (_entity_a, transform_a, hitbox_a)) in entities.iter().enumerate() {
+        for (_entity_b, transform_b, hitbox_b) in entities.iter().skip(i + 1) {
             let distance = transform_a.translation.truncate() - transform_b.translation.truncate();
             if distance.length() < (hitbox_a.size + hitbox_b.size).length() / 2.0 {
-                println!("Colisão detectada")
+                //println!("Colisão detectada")
             }
         }
     }
