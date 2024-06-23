@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::*;
 mod gamestate;
+mod hud;
 mod sonar;
 mod torpedo;
 mod player;
@@ -22,6 +23,7 @@ fn main() {
         }))
         .init_state::<gamestate::GameState>()
         .add_systems(Startup, setup_cam)
+        .add_plugins(hud::HudPlugin)
         .add_plugins(menu::MenuPlugin)
         .add_plugins(loading::LoadingPlugin)
         .add_plugins(pause::PausePlugin)
