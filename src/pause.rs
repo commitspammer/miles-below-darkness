@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::app::AppExit;
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
 
@@ -7,6 +8,7 @@ impl Plugin for PausePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, pause_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, unpause_system.run_if(in_state(GameState::Pause)))
+            .add_systems(Update, pause_menu_action.run_if(in_state(GameState::Pause)))
             .add_systems(Update, button_system.run_if(in_state(GameState::Pause)))
             .add_systems(OnEnter(GameState::Pause), spawn_pause_menu)
             .add_systems(OnExit(GameState::Pause), despawn_system::<PauseComponent>);
@@ -15,6 +17,13 @@ impl Plugin for PausePlugin {
 
 #[derive(Component)]
 struct PauseComponent;
+
+#[derive(Component)]
+enum PauseButtonAction {
+    Unpause,
+    Menu,
+    Quit,
+}
 
 const BACKGROUND: Color = Color::rgba(0.15, 0.15, 0.15, 0.30);
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
@@ -38,7 +47,7 @@ fn spawn_pause_menu(
         },
         PauseComponent,
     )).with_children(|parent| {
-        parent.spawn(
+        parent.spawn((
             ButtonBundle {
                 style: Style {
                     width: Val::Px(150.0),
@@ -51,13 +60,67 @@ fn spawn_pause_menu(
                 border_color: BorderColor(Color::BLACK),
                 background_color: NORMAL_BUTTON.into(),
                 ..default()
-            }
-        ).with_children(|parent| {
+            },
+            PauseButtonAction::Unpause,
+        )).with_children(|parent| {
             parent.spawn(
                 TextBundle::from_section(
-                    "Button",
+                    "Back",
                     TextStyle {
-                        //font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                )
+            );
+        });
+        parent.spawn((
+            ButtonBundle {
+                style: Style {
+                    width: Val::Px(150.0),
+                    height: Val::Px(65.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                border_color: BorderColor(Color::BLACK),
+                background_color: NORMAL_BUTTON.into(),
+                ..default()
+            },
+            PauseButtonAction::Menu,
+        )).with_children(|parent| {
+            parent.spawn(
+                TextBundle::from_section(
+                    "Menu",
+                    TextStyle {
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                )
+            );
+        });
+        parent.spawn((
+            ButtonBundle {
+                style: Style {
+                    width: Val::Px(150.0),
+                    height: Val::Px(65.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                border_color: BorderColor(Color::BLACK),
+                background_color: NORMAL_BUTTON.into(),
+                ..default()
+            },
+            PauseButtonAction::Quit,
+        )).with_children(|parent| {
+            parent.spawn(
+                TextBundle::from_section(
+                    "Quit",
+                    TextStyle {
                         font_size: 40.0,
                         color: Color::rgb(0.9, 0.9, 0.9),
                         ..default()
@@ -70,33 +133,47 @@ fn spawn_pause_menu(
 
 fn button_system(
     mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &Children,
-        ),
+        (&Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<Button>),
     >,
-    mut text_query: Query<&mut Text>,
 ) {
-    for (interaction, mut color, mut border_color, children) in &mut interaction_query {
-        let mut text = text_query.get_mut(children[0]).unwrap();
+    for (interaction, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                text.sections[0].value = "Press".to_string();
                 *color = PRESSED_BUTTON.into();
                 border_color.0 = Color::RED;
             }
             Interaction::Hovered => {
-                text.sections[0].value = "Hover".to_string();
                 *color = HOVERED_BUTTON.into();
                 border_color.0 = Color::WHITE;
             }
             Interaction::None => {
-                text.sections[0].value = "Button".to_string();
                 *color = NORMAL_BUTTON.into();
                 border_color.0 = Color::BLACK;
+            }
+        }
+    }
+}
+
+fn pause_menu_action(
+    interaction_query: Query<(&Interaction, &PauseButtonAction), (Changed<Interaction>, With<Button>)>,
+    mut app_exit_events: EventWriter<AppExit>,
+    mut time: ResMut<Time<Virtual>>,
+    mut game_state: ResMut<NextState<GameState>>,
+) {
+    for (interaction, action) in &interaction_query {
+        if *interaction == Interaction::Pressed {
+            match action {
+                PauseButtonAction::Unpause => {
+                    game_state.set(GameState::Game);
+                    time.unpause();
+                }
+                PauseButtonAction::Quit => {
+                    app_exit_events.send(AppExit);
+                }
+                PauseButtonAction::Menu => {
+                    game_state.set(GameState::Menu);
+                }
             }
         }
     }
