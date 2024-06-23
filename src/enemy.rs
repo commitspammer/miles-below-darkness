@@ -1,44 +1,35 @@
 use bevy::prelude::*;
-use bevy::math::Vec3;
-use rand::Rng; 
 use bevy::window::*;
-use std::time::Duration;
-use bevy::time::TimerMode;
 use crate::gamestate::GameState;
-use std::f32::consts::{PI, FRAC_PI_4};
+use crate::sonar::Sonar;
+use std::time::Duration;
+use rand::Rng;
 
 pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Game), spawn_enemy)
            .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)))
+           .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
+           .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, collision_detection_system.run_if(in_state(GameState::Game)));
-
     }
 }
 
 #[derive(Component)]
 pub struct Hitbox {
-    pub size: Vec2, // Dimensões da hitbox
+    size: Vec2,
 }
 
 #[derive(Component)]
 pub struct Enemy {
-    _rotation_speed: f32,
-    move_speed: f32,
+    rotation_speed: f32,
+    movement_speed: f32,
+    destination: Vec3,
     move_timer: Timer,
     patrol_points: Vec<Vec3>,
     current_patrol_index: usize,
 }
-
-
-// fn create_enemy(rotation_speed: f32, move_speed: f32, move_timer: Timer) -> Enemy {
-//     Enemy {
-//         rotation_speed,
-//         move_speed,
-//         move_timer,
-//     }
-// }
 
 fn generate_patrol_points(center: Vec3, radius: f32, count: usize) -> Vec<Vec3> {
     let mut points = Vec::new();
@@ -53,7 +44,6 @@ fn generate_patrol_points(center: Vec3, radius: f32, count: usize) -> Vec<Vec3> 
 
     points
 }
-
 
 fn position_is_free(position: Vec3, existing_enemies: &Vec<(Entity, Vec3, Vec2)>) -> bool {
     println!("antes do for, existing_enemies len: {}", existing_enemies.len());
@@ -111,8 +101,9 @@ pub fn spawn_enemy(
             ..default()
         })
         .insert(Enemy {
-            _rotation_speed: rng.gen_range(0.5..2.0),
-            move_speed: 10.0,
+            rotation_speed: 0.4,//rng.gen_range(0.5..2.0),
+            movement_speed: 40.0,
+            destination: Vec3::ZERO, //this will be set by enemy_rotation_system()
             move_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
             patrol_points: patrol_points.clone(),
             current_patrol_index: 0,
@@ -126,52 +117,97 @@ pub fn spawn_enemy(
     }
 }
 
+fn enemy_destination_system(
+    mut enemies_query: Query<(&mut Enemy, &mut Transform)>,
+    mut sonar_query: Query<(&Sonar, &Transform), Without<Enemy>>,
+) {
+    let (sonar, sonar_transform) = sonar_query.single_mut();
+    let max_distance = sonar.radius;
+    let min_distance = 185.0;
+    let center = sonar_transform.translation;
+
+    let mut rng = rand::thread_rng();
+    for (mut enemy, transform) in enemies_query.iter_mut() {
+        if enemy.destination == Vec3::ZERO || transform.translation.distance(enemy.destination) <= 1.0 {
+            let radian = rng.gen_range(0.0..std::f32::consts::TAU);
+            let distance = rng.gen_range(min_distance..=max_distance);
+            let position = Vec3::new(
+                distance * radian.sin() + center.x,
+                distance * radian.cos() + center.y,
+                transform.translation.z
+            );
+            enemy.destination = position;
+        }
+    }
+}
+
+fn enemy_rotation_system(
+    time: Res<Time>,
+    mut query: Query<(&mut Enemy, &mut Transform)>,
+) {
+    for (enemy, mut transform) in query.iter_mut() {
+        let to_destination = (enemy.destination.xy() - transform.translation.xy()).normalize();
+        let up = transform.up().xy();
+        let up_dot = up.dot(to_destination);
+        if (up_dot - 1.0).abs() < f32::EPSILON {
+            continue;
+        }
+        let right = transform.right().xy();
+        let right_dot = right.dot(to_destination);
+        let rotation_factor = -f32::copysign(1.0, right_dot);
+        let max_angle = up_dot.clamp(-1.0, 1.0).acos();
+        let rotation_angle = (enemy.rotation_speed * time.delta_seconds()).min(max_angle);
+        transform.rotate_z(rotation_factor * rotation_angle);
+    }
+}
 
 fn enemy_movement_system(
     time: Res<Time>,
     mut query: Query<(&mut Enemy, &mut Transform)>,
 ) {
-    for (mut enemy, mut transform) in query.iter_mut() {
-        enemy.move_timer.tick(time.delta());
+    for (enemy, mut transform) in query.iter_mut() {
+        let up = transform.up();
+        transform.translation += up * enemy.movement_speed * time.delta_seconds();
 
-        if enemy.move_timer.finished() {
-            let target = enemy.patrol_points[enemy.current_patrol_index];
-            let direction = (target - transform.translation).normalize();
-            let desired_angle = direction.y.atan2(direction.x);
-            let current_angle = transform.rotation.to_euler(EulerRot::XYZ).2; 
+        //enemy.move_timer.tick(time.delta());
 
-            let mut angle_diff = (desired_angle - current_angle).abs();
-            if angle_diff > PI {
-                angle_diff = 2.0 * PI - angle_diff; 
-            }
+        //if enemy.move_timer.finished() {
+        //    let target = enemy.patrol_points[enemy.current_patrol_index];
+        //    let direction = (target - transform.translation).normalize();
+        //    let desired_angle = direction.y.atan2(direction.x);
+        //    let current_angle = transform.rotation.to_euler(EulerRot::XYZ).2; 
 
-            let rotation_limit = FRAC_PI_4; 
-            if angle_diff > rotation_limit {
-                angle_diff = angle_diff.signum() * rotation_limit;
-            }
+        //    let mut angle_diff = (desired_angle - current_angle).abs();
+        //    if angle_diff > PI {
+        //        angle_diff = 2.0 * PI - angle_diff; 
+        //    }
 
-            println!("Enemy position1: {:?}", transform.translation);
-           
-            transform.rotation *= Quat::from_rotation_z(angle_diff);
+        //    let rotation_limit = FRAC_PI_4; 
+        //    if angle_diff > rotation_limit {
+        //        angle_diff = angle_diff.signum() * rotation_limit;
+        //    }
 
-            println!("Enemy position2: {:?}", transform.translation);
+        //    println!("Enemy position1: {:?}", transform.translation);
+        //   
+        //    transform.rotation *= Quat::from_rotation_z(angle_diff);
 
-            let forward = transform.forward();
-            let forward_xy = Vec3::new(forward.x, forward.y, 0.0);
-            println!("forward_xy: {:?}", forward_xy);
-            transform.translation += forward_xy * enemy.move_speed * time.delta_seconds();
+        //    println!("Enemy position2: {:?}", transform.translation);
 
-            println!("Enemy position3: {:?}", transform.translation);
+        //    let forward = transform.forward();
+        //    let forward_xy = Vec3::new(forward.x, forward.y, 0.0);
+        //    println!("forward_xy: {:?}", forward_xy);
+        //    transform.translation += forward_xy * enemy.movement_speed * time.delta_seconds();
 
-            if transform.translation.distance(target) < 5.0 {
-                enemy.current_patrol_index = (enemy.current_patrol_index + 1) % enemy.patrol_points.len();
-            }
+        //    println!("Enemy position3: {:?}", transform.translation);
 
-            enemy.move_timer.reset();
-        }
+        //    if transform.translation.distance(target) < 5.0 {
+        //        enemy.current_patrol_index = (enemy.current_patrol_index + 1) % enemy.patrol_points.len();
+        //    }
+
+        //    enemy.move_timer.reset();
+        //}
     }
 }
-
 
 fn collision_detection_system(
     _commands: Commands,
@@ -187,3 +223,32 @@ fn collision_detection_system(
         }
     }
 }
+
+//fn sex(
+//    mut commands: Commands,
+//    mut sonar_query: Query<(&Sonar, &Transform), Without<Enemy>>,
+//    mut meshes: ResMut<Assets<Mesh>>,
+//    mut materials: ResMut<Assets<ColorMaterial>>,
+//) {
+//    let (mut sonar, sonar_transform) = sonar_query.single_mut();
+//    let max_distance = sonar.radius;
+//    let min_distance = 185.0;
+//    let center = sonar_transform.translation;
+//
+//    let mut rng = rand::thread_rng();
+//    let radian = rng.gen_range(0.0..std::f32::consts::TAU);
+//    let distance = rng.gen_range(min_distance..=max_distance);
+//    let position = Vec3::new(
+//        distance * radian.sin() + center.x,
+//        distance * radian.cos() + center.y,
+//        3.0
+//    );
+//    commands.spawn((
+//        bevy::sprite::MaterialMesh2dBundle {
+//            mesh: meshes.add(Rectangle::new(3.0, 3.0)).into(),
+//            material: materials.add(Color::RED),
+//            transform: Transform::from_translation(position),
+//            ..default()
+//        }
+//    ));
+//}
