@@ -1,15 +1,15 @@
 use bevy::prelude::*;
-use bevy::sprite::MaterialMesh2dBundle;
 use crate::gamestate::GameState;
 use crate::player::Player;
 use std::time::Duration;
+use std::f32::consts::PI;
 
 pub struct TorpedoPlugin;
 impl Plugin for TorpedoPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, spawn_torpedo_system.run_if(in_state(GameState::Game)))
+        app.add_systems(Update, shoot_torpedo_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
-            .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(1), TimerMode::Once)));
+            .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(3), TimerMode::Once)));
     }
 }
 
@@ -18,39 +18,85 @@ pub struct Torpedo {
     movement_speed: f32,
 }
 
+#[derive(Component)]
+pub struct RegularTorpedo;
+
+#[derive(Component)]
+pub struct GuidedTorpedo;
+
+#[derive(Component)]
+pub struct CounterTorpedo;
+
 #[derive(Resource, Deref, DerefMut)]
 pub struct TorpedoCooldown(Timer);
 
-pub fn spawn_torpedo_system(
+pub fn shoot_torpedo_system(
     time: Res<Time>,
+    asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut player_query: Query<(&Player, &mut Transform)>,
     mut cooldown_timer: ResMut<TorpedoCooldown>,
 ) {
     cooldown_timer.tick(Duration::from_secs_f32(time.delta_seconds()));
-    
-    if cooldown_timer.finished() && keyboard_input.pressed(KeyCode::Space) {
-        let (_, player_transform) = player_query.single_mut();
-        let shape = meshes.add(Capsule2d::new(3.0, 25.0)).into();
+    if !cooldown_timer.finished()  {
+        return
+    }
+    let (_, player_transform) = player_query.single_mut();
+    if keyboard_input.pressed(KeyCode::Space) {
         commands.spawn((
-            MaterialMesh2dBundle {
-                mesh:shape,
-                material: materials.add(Color::GREEN),
+            SpriteBundle {
+                texture: asset_server.load("../assets/torpedo-comum.png"),
                 transform: Transform {
                     translation: player_transform.translation,
                     rotation: player_transform.rotation,
-                    scale: Vec3::splat(0.5),
-                    //..default()
+                    scale: Vec3::splat(0.2),
                 },
                 ..default()
             },
             Torpedo {
-                movement_speed: 100.0,
-            }
+                movement_speed: 50.0,
+            },
+            RegularTorpedo,
         ));
+        cooldown_timer.reset();
+    }
+    if keyboard_input.pressed(KeyCode::ShiftLeft) {
+        commands.spawn((
+            SpriteBundle {
+                texture: asset_server.load("../assets/torpedo-teleguiado.png"),
+                transform: Transform {
+                    translation: player_transform.translation,
+                    rotation: player_transform.rotation,
+                    scale: Vec3::splat(0.2),
+                },
+                ..default()
+            },
+            Torpedo {
+                movement_speed: 50.0,
+            },
+            GuidedTorpedo,
+        ));
+        cooldown_timer.reset();
+    }
+    if keyboard_input.pressed(KeyCode::ControlLeft) {
+        for i in vec![0.5, 1.5] {
+            commands.spawn((
+                SpriteBundle {
+                    texture: asset_server.load("../assets/torpedo-contramedida.png"),
+                    transform: Transform {
+                        translation: player_transform.translation,
+                        rotation: player_transform.rotation * Quat::from_rotation_z(PI * i),
+                        scale: Vec3::splat(0.2),
+                    },
+                    ..default()
+                },
+                Torpedo {
+                    movement_speed: 25.0,
+                },
+                CounterTorpedo,
+            ));
+        }
         cooldown_timer.reset();
     }
 }
