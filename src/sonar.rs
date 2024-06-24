@@ -31,8 +31,32 @@ pub fn setup_sonar(
     let window = windows.single_mut();
     let radius = window.resolution.height() / 2.0;
     let texture_handle = asset_server.load("../assets/radar.png");
+    let texture_handle2 = asset_server.load("../assets/painel.png");
     let texture_height = 857.0; //yes, this is the hardcoded sprite's height in px's (dont @ me)
+    let background_height = 1024.0; 
+    let background_width = 1792.0;
     let (x, y) = (0.0, 0.0);
+
+
+    let painel_center_x = (window.resolution.width() / 2.0) - 1000.0;
+    let painel_center_y = (window.resolution.height() / 2.0) - 750.0;
+    
+    
+    let scale_factor_x = (window.resolution.width() / background_width) * 1.7; 
+    let scale_factor_y = (window.resolution.height() / background_height) * 1.7; 
+    
+    commands.spawn((
+        SpriteBundle {
+            texture: texture_handle2,
+            transform: Transform {
+                translation: Vec3::new(painel_center_x, painel_center_y, -3.0),
+                scale: Vec3::new(scale_factor_x, scale_factor_y, 1.0), 
+                ..default()
+            },
+            ..default()
+        },
+    ));
+
     commands.spawn((
         SpriteBundle {
             texture: texture_handle,
@@ -47,6 +71,8 @@ pub fn setup_sonar(
             radius: radius,
         }
     ));
+
+
     commands.spawn((
         MaterialMesh2dBundle {
             mesh: meshes.add(Rectangle::new(2.0, radius)).into(),
