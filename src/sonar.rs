@@ -13,7 +13,7 @@ impl Plugin for SonarPlugin {
 
 #[derive(Component)]
 pub struct Sonar {
-    radius: f32,
+    pub radius: f32,
 }
 
 #[derive(Component)]
