@@ -8,7 +8,7 @@ use rand::Rng;
 pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Game), spawn_enemy)
+        app.add_systems(OnEnter(GameState::Loading), spawn_enemy)
            .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
