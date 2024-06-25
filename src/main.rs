@@ -9,6 +9,7 @@ mod menu;
 mod loading;
 mod pause;
 mod enemy;
+mod hitbox;
 
 fn main() {
     App::new()
@@ -31,6 +32,7 @@ fn main() {
         .add_plugins(player::PlayerPlugin)
         .add_plugins(torpedo::TorpedoPlugin)
         .add_plugins(enemy::EnemyPlugin)
+        .add_plugins(hitbox::HitboxPlugin)
         .run()
 }
 

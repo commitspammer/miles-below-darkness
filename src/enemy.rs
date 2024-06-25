@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::window::*;
 use crate::gamestate::GameState;
 use crate::sonar::Sonar;
+use crate::hitbox::Hitbox;
 use std::time::Duration;
 use rand::Rng;
 
@@ -11,15 +12,15 @@ impl Plugin for EnemyPlugin {
         app.add_systems(OnEnter(GameState::Loading), spawn_enemy)
            .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
-           .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
-           .add_systems(Update, collision_detection_system.run_if(in_state(GameState::Game)));
+           .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)));
+           //.add_systems(Update, collision_detection_system.run_if(in_state(GameState::Game)));
     }
 }
 
-#[derive(Component)]
-pub struct Hitbox {
-    size: Vec2,
-}
+//#[derive(Component)]
+//pub struct Hitbox {
+//    size: Vec2,
+//}
 
 #[derive(Component)]
 pub struct Enemy {
@@ -64,7 +65,7 @@ pub fn spawn_enemy(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
-    query: Query<(Entity, &Transform, &Hitbox)>, 
+    query: Query<(Entity, &Transform)>//, &Hitbox)>, 
 ) {
     let window = windows.single_mut();
     let radius = (window.resolution.height() / 4.0) + 20.0;
@@ -72,7 +73,7 @@ pub fn spawn_enemy(
     let patrol_points = generate_patrol_points(Vec3::ZERO, patrol_radius, 6); // 6 pontos de patrulha
     let mut rng = rand::thread_rng();
 
-    let mut existing_enemies: Vec<(Entity, Vec3, Vec2)> = query.iter().map(|(e, t, h)| (e, t.translation, h.size)).collect();
+    //let mut existing_enemies: Vec<(Entity, Vec3, Vec2)> = query.iter().map(|(e, t, h)| (e, t.translation, h.size)).collect();
 
     for _ in 0..5 {
         let mut position = Vec3::ZERO;
@@ -83,9 +84,9 @@ pub fn spawn_enemy(
             let distance = rng.gen_range(radius..radius + 200.0);
             position = Vec3::new(distance * angle.cos(), distance * angle.sin(), 0.0);
 
-            if position_is_free(position, &existing_enemies) {
+            //if position_is_free(position, &existing_enemies) {
                 position_found = true;
-            }
+            //}
         }
 
         let direction_to_player = Vec3::new(0.0, 0.0, 0.0) - position;
@@ -108,12 +109,14 @@ pub fn spawn_enemy(
             patrol_points: patrol_points.clone(),
             current_patrol_index: 0,
         })
-        .insert(Hitbox {
-            size: Vec2::new(50.0, 50.0),
-        })
+        //.insert(Hitbox {
+        //    size: Vec2::new(50.0, 50.0),
+        //})
+        //.insert(Hitbox::new(300.0, 900.0))
+        .insert(Hitbox::new(300.0, 300.0))
         .id();
 
-        existing_enemies.push((enemy_entity, position, Vec2::new(50.0, 50.0)));
+        //existing_enemies.push((enemy_entity, position, Vec2::new(50.0, 50.0)));
     }
 }
 
@@ -209,20 +212,20 @@ fn enemy_movement_system(
     }
 }
 
-fn collision_detection_system(
-    _commands: Commands,
-    query: Query<(Entity, &Transform, &Hitbox)>,
-) {
-    let entities: Vec<(Entity, &Transform, &Hitbox)> = query.iter().collect();
-    for (i, (_entity_a, transform_a, hitbox_a)) in entities.iter().enumerate() {
-        for (_entity_b, transform_b, hitbox_b) in entities.iter().skip(i + 1) {
-            let distance = transform_a.translation.truncate() - transform_b.translation.truncate();
-            if distance.length() < (hitbox_a.size + hitbox_b.size).length() / 2.0 {
-                //println!("Colisão detectada")
-            }
-        }
-    }
-}
+////////fn collision_detection_system(
+////////    _commands: Commands,
+////////    query: Query<(Entity, &Transform, &Hitbox)>,
+////////) {
+////////    let entities: Vec<(Entity, &Transform, &Hitbox)> = query.iter().collect();
+////////    for (i, (_entity_a, transform_a, hitbox_a)) in entities.iter().enumerate() {
+////////        for (_entity_b, transform_b, hitbox_b) in entities.iter().skip(i + 1) {
+////////            let distance = transform_a.translation.truncate() - transform_b.translation.truncate();
+////////            if distance.length() < (hitbox_a.size + hitbox_b.size).length() / 2.0 {
+////////                //println!("Colisão detectada")
+////////            }
+////////        }
+////////    }
+////////}
 
 //fn sex(
 //    mut commands: Commands,
