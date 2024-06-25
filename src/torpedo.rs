@@ -9,7 +9,7 @@ impl Plugin for TorpedoPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, shoot_torpedo_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
-            .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(3), TimerMode::Once)));
+            .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(2), TimerMode::Once)));
     }
 }
 

@@ -38,6 +38,9 @@ impl Hitbox {
 }
 
 fn collision_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut event_writer: EventWriter<Collision>,
     query: Query<(Entity, &Hitbox, &Transform)>
 ) {
@@ -47,21 +50,31 @@ fn collision_system(
             //temporary AABB algo, soon will be SAT 
             let a_min_x = transform_a.translation.x - hitbox_a.width / 2.0;
             let a_max_x = transform_a.translation.x + hitbox_a.width / 2.0;
-            let b_min_x = transform_b.translation.x - hitbox_b.width / 2.0;
-            let b_max_x = transform_b.translation.x + hitbox_b.width / 2.0;
-
             let a_min_y = transform_a.translation.y - hitbox_a.height / 2.0;
             let a_max_y = transform_a.translation.y + hitbox_a.height / 2.0;
+
+            let b_min_x = transform_b.translation.x - hitbox_b.width / 2.0;
+            let b_max_x = transform_b.translation.x + hitbox_b.width / 2.0;
             let b_min_y = transform_b.translation.y - hitbox_b.height / 2.0;
             let b_max_y = transform_b.translation.y + hitbox_b.height / 2.0;
 
             let overlap_x = a_min_x < b_max_x && a_max_x > b_min_x;
             let overlap_y = a_min_y < b_max_y && a_max_y > b_min_y;
 
-            println!("{} {}", overlap_x, overlap_y);
+            //println!("{} {}", overlap_x, overlap_y);
+            println!("{} {}", transform_a.translation.x, transform_a.translation.y);
             if overlap_x && overlap_y {
                 event_writer.send(Collision(*entity_a, *entity_b));
             }
+            commands.spawn((
+                MaterialMesh2dBundle {
+                    mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
+                    material: materials.add(Color::RED),
+                    transform: Transform::from_xyz((a_max_x + a_min_x) / 2.0, (a_max_y + a_min_y) / 2.0, 0.0),
+                    ..default()
+                },
+                Debugbox,
+            ));
         }
     }
 }
@@ -107,7 +120,12 @@ fn draw_debug_system(
             MaterialMesh2dBundle {
                 mesh: meshes.add(Rectangle::new(hitbox.width, hitbox.height)).into(),
                 material: materials.add(if hitbox.colliding { Color::BLUE } else { Color::GREEN }),
-                transform: transform.clone(),
+                //transform: transform.clone(),
+                transform: Transform {
+                    translation: transform.translation.clone(),
+                    rotation: transform.rotation.clone(),
+                    ..default()
+                },
                 ..default()
             },
             Debugbox,

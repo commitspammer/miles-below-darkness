@@ -112,8 +112,8 @@ pub fn spawn_enemy(
         //.insert(Hitbox {
         //    size: Vec2::new(50.0, 50.0),
         //})
-        //.insert(Hitbox::new(300.0, 900.0))
-        .insert(Hitbox::new(300.0, 300.0))
+        .insert(Hitbox::new(30.0, 90.0))
+        //.insert(Hitbox::new(300.0, 300.0))
         .id();
 
         //existing_enemies.push((enemy_entity, position, Vec2::new(50.0, 50.0)));
@@ -227,7 +227,7 @@ fn enemy_movement_system(
 ////////    }
 ////////}
 
-//fn sex(
+//fn tex(
 //    mut commands: Commands,
 //    mut sonar_query: Query<(&Sonar, &Transform), Without<Enemy>>,
 //    mut meshes: ResMut<Assets<Mesh>>,
