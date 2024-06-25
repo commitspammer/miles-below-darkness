@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
+use bevy::window::*;
 
 pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
@@ -22,14 +23,43 @@ enum MenuButtonAction {
     Quit,
 }
 
+const NORMAL_BUTTON: Color = Color::rgba(0.15, 0.15, 0.15,0.9);
+
 const BACKGROUND: Color = Color::rgba(0.15, 0.15, 0.15, 0.30);
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+//const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
 fn spawn_menu(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
+
+    let window = windows.single_mut();
+    let radius = window.resolution.height() / 2.0;
+    let background_height = 1024.0; 
+    let background_width = 1792.0;
+
+    let painel_center_x = (window.resolution.width() / 2.0) - 960.0;
+    let painel_center_y = (window.resolution.height() / 2.0) - 560.0;
+    
+    
+    let scale_factor_x = (window.resolution.width() / background_width) * 1.0; 
+    let scale_factor_y = (window.resolution.height() / background_height) * 1.0; 
+
+    
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("../assets/menu-inicial.png"),
+        transform: Transform {
+            translation: Vec3::new(painel_center_x, painel_center_y, -3.0),
+            scale: Vec3::new(scale_factor_x, scale_factor_y, 1.0), 
+            ..default()
+        },
+        ..default()
+    });
+
+
     commands.spawn((
         NodeBundle {
             style: Style {
@@ -49,13 +79,17 @@ fn spawn_menu(
                 style: Style {
                     width: Val::Px(150.0),
                     height: Val::Px(65.0),
+                    margin: UiRect {
+                        top: Val::Px(-320.0),
+                        left: Val::Px(50.0), // Adiciona margem à esquerda
+                        ..default()
+                    },
                     border: UiRect::all(Val::Px(5.0)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                border_color: BorderColor(Color::BLACK),
-                background_color: NORMAL_BUTTON.into(),
+                
                 ..default()
             },
             MenuButtonAction::Play
@@ -66,7 +100,7 @@ fn spawn_menu(
                     TextStyle {
                         //font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 40.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgba(0.5, 0.0, 0.5, 0.5),
                         ..default()
                     },
                 )
@@ -77,12 +111,16 @@ fn spawn_menu(
                 style: Style {
                     width: Val::Px(150.0),
                     height: Val::Px(65.0),
+                    margin: UiRect {
+                        top: Val::Px(-320.0),
+                        left: Val::Px(0.0), // Adiciona margem à esquerda
+                        ..default()
+                    },
                     border: UiRect::all(Val::Px(5.0)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                border_color: BorderColor(Color::BLACK),
                 background_color: NORMAL_BUTTON.into(),
                 ..default()
             },
@@ -94,7 +132,7 @@ fn spawn_menu(
                     TextStyle {
                         //font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                         font_size: 40.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgba(0.5, 0.0, 0.5, 0.5),
                         ..default()
                     },
                 )
