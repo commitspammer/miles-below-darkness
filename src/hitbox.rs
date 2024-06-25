@@ -8,15 +8,17 @@ impl Plugin for HitboxPlugin {
         app.add_event::<Collision>()
             .add_systems(Update, draw_debug_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, read_event_debug_system.run_if(in_state(GameState::Game)))
-            .add_systems(Update, collision_system.run_if(in_state(GameState::Game)));
+            .add_systems(Update, collision_system.run_if(in_state(GameState::Game)))
+            .add_systems(Update, collide_system.run_if(in_state(GameState::Game)));
     }
 }
 
 #[derive(Component)]
 pub struct Hitbox {
     //relative_transform: Transform,
-    width: f32,
-    height: f32,
+    pub width: f32,
+    pub height: f32,
+    colliding: bool,
 }
 
 #[derive(Component)]
@@ -27,7 +29,7 @@ struct Collision(Entity, Entity);
 
 impl Hitbox {
     pub fn new(w: f32, h: f32) -> Hitbox {
-        Hitbox { width: w, height: h }
+        Hitbox { width: w, height: h, colliding: false }
     }
 
     pub fn intersects(&self, _h: &Hitbox) -> bool {
@@ -64,15 +66,28 @@ fn collision_system(
     }
 }
 
-static mut counter: u64 = 0;
+fn collide_system(
+    mut event_reader: EventReader<Collision>,
+    mut query: Query<(Entity, &mut Hitbox)>
+) {
+    for event in event_reader.read() {
+        for (entity, mut hitbox) in query.iter_mut() {
+            if entity == event.0 || entity == event.1 {
+                hitbox.colliding = true;
+            }
+        }
+    }
+}
+
+static mut COUNTER: u64 = 0;
 
 fn read_event_debug_system(
     mut event_reader: EventReader<Collision>,
 ) {
     for event in event_reader.read() {
         unsafe {
-            println!("Entity {:?} and {:?} have collided! ({})", event.0, event.1, counter);
-            counter += 1;
+            println!("Entity {:?} and {:?} have collided! ({})", event.0, event.1, COUNTER);
+            COUNTER += 1;
         }
     }
 }
@@ -91,7 +106,7 @@ fn draw_debug_system(
         commands.spawn((
             MaterialMesh2dBundle {
                 mesh: meshes.add(Rectangle::new(hitbox.width, hitbox.height)).into(),
-                material: materials.add(Color::GREEN),
+                material: materials.add(if hitbox.colliding { Color::BLUE } else { Color::GREEN }),
                 transform: transform.clone(),
                 ..default()
             },
