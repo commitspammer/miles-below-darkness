@@ -46,7 +46,7 @@ fn spawn_controls_sheet(
                     "Rotate sub: A/D/<-/->",
                     TextStyle {
                         font_size: 30.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgb(0.8, 0.0, 0.5),
                         ..default()
                     },
                 ),
@@ -56,7 +56,7 @@ fn spawn_controls_sheet(
                     "Fire regular: SPACE",
                     TextStyle {
                         font_size: 30.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgb(0.8, 0.0, 0.5),
                         ..default()
                     },
                 ),
@@ -66,7 +66,7 @@ fn spawn_controls_sheet(
                     "Fire guided: SHIFT",
                     TextStyle {
                         font_size: 30.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgb(0.8, 0.0, 0.5),
                         ..default()
                     },
                 ),
@@ -76,7 +76,7 @@ fn spawn_controls_sheet(
                     "Fire counter: CTRL",
                     TextStyle {
                         font_size: 30.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
+                        color: Color::rgb(0.8, 0.0, 0.5),
                         ..default()
                     },
                 ),
