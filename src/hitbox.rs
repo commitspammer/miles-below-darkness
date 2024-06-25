@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use crate::gamestate::GameState;
+use std::f32::consts::PI;
 
 pub struct HitboxPlugin;
 impl Plugin for HitboxPlugin {
@@ -58,19 +59,87 @@ fn collision_system(
             let b_min_y = transform_b.translation.y - hitbox_b.height / 2.0;
             let b_max_y = transform_b.translation.y + hitbox_b.height / 2.0;
 
+            let vertices = (
+                Vec2::new(a_min_x, a_min_y),
+                Vec2::new(a_max_x, a_min_y),
+                Vec2::new(a_min_x, a_max_y),
+                Vec2::new(a_max_x, a_max_y),
+                Vec2::new(b_min_x, b_min_y),
+                Vec2::new(b_max_x, b_min_y),
+                Vec2::new(b_min_x, b_max_y),
+                Vec2::new(b_max_x, b_max_y),
+            );
+            //let (angle_a, angle_b): (f32, f32) = (0.0, 0.0);
+            //let (angle_a, angle_b): (f32, f32) = (PI / 2.0, PI / 2.0);
+            //let (angle_a, angle_b): (f32, f32) = (PI, PI);
+            //let (angle_a, angle_b): (f32, f32) = (2.*PI, 2.*PI);
+            let (_, angle_a) = transform_a.rotation.to_axis_angle();
+            let (_, angle_b) = transform_b.rotation.to_axis_angle();
+            let rotated_vertices_a = vec![
+                Vec2::new(
+                    vertices.0.x * angle_a.cos() - vertices.0.y * angle_a.sin(),
+                    vertices.0.y * angle_a.cos() + vertices.0.x * angle_a.sin()),
+                Vec2::new(
+                    vertices.1.x * angle_a.cos() - vertices.1.y * angle_a.sin(),
+                    vertices.1.y * angle_a.cos() + vertices.1.x * angle_a.sin()),
+                Vec2::new(
+                    vertices.2.x * angle_a.cos() - vertices.2.y * angle_a.sin(),
+                    vertices.2.y * angle_a.cos() + vertices.2.x * angle_a.sin()),
+                Vec2::new(
+                    vertices.3.x * angle_a.cos() - vertices.3.y * angle_a.sin(),
+                    vertices.3.y * angle_a.cos() + vertices.3.x * angle_a.sin()),
+            ];
+            let rotated_vertices_b = vec![
+                Vec2::new(
+                    vertices.4.x * angle_b.cos() - vertices.4.y * angle_b.sin(),
+                    vertices.4.y * angle_b.cos() + vertices.4.x * angle_b.sin()),
+                Vec2::new(
+                    vertices.5.x * angle_b.cos() - vertices.5.y * angle_b.sin(),
+                    vertices.5.y * angle_b.cos() + vertices.5.x * angle_b.sin()),
+                Vec2::new(
+                    vertices.6.x * angle_b.cos() - vertices.6.y * angle_b.sin(),
+                    vertices.6.y * angle_b.cos() + vertices.6.x * angle_b.sin()),
+                Vec2::new(
+                    vertices.7.x * angle_b.cos() - vertices.7.y * angle_b.sin(),
+                    vertices.7.y * angle_b.cos() + vertices.7.x * angle_b.sin()),
+            ];
+
+            let a_min_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::min).unwrap();
+            let a_max_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::max).unwrap();
+            let a_min_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::min).unwrap();
+            let a_max_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::max).unwrap();
+
+            let b_min_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::min).unwrap();
+            let b_max_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::max).unwrap();
+            let b_min_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::min).unwrap();
+            let b_max_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::max).unwrap();
+
             let overlap_x = a_min_x < b_max_x && a_max_x > b_min_x;
             let overlap_y = a_min_y < b_max_y && a_max_y > b_min_y;
 
             //println!("{} {}", overlap_x, overlap_y);
-            println!("{} {}", transform_a.translation.x, transform_a.translation.y);
+            //println!("{} {}", transform_a.translation.x, transform_a.translation.y);
             if overlap_x && overlap_y {
                 event_writer.send(Collision(*entity_a, *entity_b));
             }
             commands.spawn((
                 MaterialMesh2dBundle {
-                    mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
+                    mesh: meshes.add(Rectangle::new(a_max_x - a_min_x, a_max_y - a_min_y)).into(),
+                    //mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
                     material: materials.add(Color::RED),
                     transform: Transform::from_xyz((a_max_x + a_min_x) / 2.0, (a_max_y + a_min_y) / 2.0, 0.0),
+                    //transform: Transform::from_translation(transform_a.translation),
+                    ..default()
+                },
+                Debugbox,
+            ));
+            commands.spawn((
+                MaterialMesh2dBundle {
+                    mesh: meshes.add(Rectangle::new(b_max_x - b_min_x, b_max_y - b_min_y)).into(),
+                    //mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
+                    material: materials.add(Color::RED),
+                    transform: Transform::from_xyz((b_max_x + b_min_x) / 2.0, (b_max_y + b_min_y) / 2.0, 0.0),
+                    //transform: Transform::from_translation(transform_b.translation),
                     ..default()
                 },
                 Debugbox,
