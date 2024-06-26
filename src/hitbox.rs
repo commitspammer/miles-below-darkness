@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use crate::gamestate::GameState;
-use std::f32::consts::PI;
 
 pub struct HitboxPlugin;
 impl Plugin for HitboxPlugin {
@@ -49,32 +48,31 @@ fn collision_system(
     for (i, (entity_a, hitbox_a, transform_a)) in entities.iter().enumerate() {
         for (entity_b, hitbox_b, transform_b) in entities.iter().skip(i + 1) {
             //temporary AABB algo, soon will be SAT 
-            let a_min_x = transform_a.translation.x - hitbox_a.width / 2.0;
-            let a_max_x = transform_a.translation.x + hitbox_a.width / 2.0;
-            let a_min_y = transform_a.translation.y - hitbox_a.height / 2.0;
-            let a_max_y = transform_a.translation.y + hitbox_a.height / 2.0;
+            let a_min_x = - hitbox_a.width  / 2.0;
+            let a_max_x =   hitbox_a.width  / 2.0;
+            let a_min_y = - hitbox_a.height / 2.0;
+            let a_max_y =   hitbox_a.height / 2.0;
 
-            let b_min_x = transform_b.translation.x - hitbox_b.width / 2.0;
-            let b_max_x = transform_b.translation.x + hitbox_b.width / 2.0;
-            let b_min_y = transform_b.translation.y - hitbox_b.height / 2.0;
-            let b_max_y = transform_b.translation.y + hitbox_b.height / 2.0;
+            let b_min_x = - hitbox_b.width  / 2.0;
+            let b_max_x =   hitbox_b.width  / 2.0;
+            let b_min_y = - hitbox_b.height / 2.0;
+            let b_max_y =   hitbox_b.height / 2.0;
 
             let vertices = (
                 Vec2::new(a_min_x, a_min_y),
                 Vec2::new(a_max_x, a_min_y),
                 Vec2::new(a_min_x, a_max_y),
                 Vec2::new(a_max_x, a_max_y),
+
                 Vec2::new(b_min_x, b_min_y),
                 Vec2::new(b_max_x, b_min_y),
                 Vec2::new(b_min_x, b_max_y),
                 Vec2::new(b_max_x, b_max_y),
             );
-            //let (angle_a, angle_b): (f32, f32) = (0.0, 0.0);
-            //let (angle_a, angle_b): (f32, f32) = (PI / 2.0, PI / 2.0);
-            //let (angle_a, angle_b): (f32, f32) = (PI, PI);
-            //let (angle_a, angle_b): (f32, f32) = (2.*PI, 2.*PI);
+
             let (_, angle_a) = transform_a.rotation.to_axis_angle();
             let (_, angle_b) = transform_b.rotation.to_axis_angle();
+
             let rotated_vertices_a = vec![
                 Vec2::new(
                     vertices.0.x * angle_a.cos() - vertices.0.y * angle_a.sin(),
@@ -104,31 +102,28 @@ fn collision_system(
                     vertices.7.y * angle_b.cos() + vertices.7.x * angle_b.sin()),
             ];
 
-            let a_min_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::min).unwrap();
-            let a_max_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::max).unwrap();
-            let a_min_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::min).unwrap();
-            let a_max_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::max).unwrap();
+            let a_min_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::min).unwrap() + transform_a.translation.x;
+            let a_max_x = rotated_vertices_a.iter().map(|v| v.x).reduce(f32::max).unwrap() + transform_a.translation.x;
+            let a_min_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::min).unwrap() + transform_a.translation.y;
+            let a_max_y = rotated_vertices_a.iter().map(|v| v.y).reduce(f32::max).unwrap() + transform_a.translation.y;
 
-            let b_min_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::min).unwrap();
-            let b_max_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::max).unwrap();
-            let b_min_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::min).unwrap();
-            let b_max_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::max).unwrap();
+            let b_min_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::min).unwrap() + transform_b.translation.x;
+            let b_max_x = rotated_vertices_b.iter().map(|v| v.x).reduce(f32::max).unwrap() + transform_b.translation.x;
+            let b_min_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::min).unwrap() + transform_b.translation.y;
+            let b_max_y = rotated_vertices_b.iter().map(|v| v.y).reduce(f32::max).unwrap() + transform_b.translation.y;
 
             let overlap_x = a_min_x < b_max_x && a_max_x > b_min_x;
             let overlap_y = a_min_y < b_max_y && a_max_y > b_min_y;
 
-            //println!("{} {}", overlap_x, overlap_y);
-            //println!("{} {}", transform_a.translation.x, transform_a.translation.y);
             if overlap_x && overlap_y {
                 event_writer.send(Collision(*entity_a, *entity_b));
             }
+
             commands.spawn((
                 MaterialMesh2dBundle {
                     mesh: meshes.add(Rectangle::new(a_max_x - a_min_x, a_max_y - a_min_y)).into(),
-                    //mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
                     material: materials.add(Color::RED),
                     transform: Transform::from_xyz((a_max_x + a_min_x) / 2.0, (a_max_y + a_min_y) / 2.0, 0.0),
-                    //transform: Transform::from_translation(transform_a.translation),
                     ..default()
                 },
                 Debugbox,
@@ -136,10 +131,8 @@ fn collision_system(
             commands.spawn((
                 MaterialMesh2dBundle {
                     mesh: meshes.add(Rectangle::new(b_max_x - b_min_x, b_max_y - b_min_y)).into(),
-                    //mesh: meshes.add(Rectangle::new(hitbox_a.width, hitbox_a.height)).into(),
                     material: materials.add(Color::RED),
                     transform: Transform::from_xyz((b_max_x + b_min_x) / 2.0, (b_max_y + b_min_y) / 2.0, 0.0),
-                    //transform: Transform::from_translation(transform_b.translation),
                     ..default()
                 },
                 Debugbox,
@@ -189,7 +182,6 @@ fn draw_debug_system(
             MaterialMesh2dBundle {
                 mesh: meshes.add(Rectangle::new(hitbox.width, hitbox.height)).into(),
                 material: materials.add(if hitbox.colliding { Color::BLUE } else { Color::GREEN }),
-                //transform: transform.clone(),
                 transform: Transform {
                     translation: transform.translation.clone(),
                     rotation: transform.rotation.clone(),
