@@ -18,14 +18,17 @@ pub struct Hitbox {
     //relative_transform: Transform,
     pub width: f32,
     pub height: f32,
-    colliding: bool,
+    pub colliding: bool,
 }
 
 #[derive(Component)]
 struct Debugbox;
 
 #[derive(Event)]
-struct Collision(Entity, Entity);
+pub struct Collision {
+    pub entity_a: Entity,
+    pub entity_b: Entity,
+}
 
 impl Hitbox {
     pub fn new(w: f32, h: f32) -> Hitbox {
@@ -116,7 +119,7 @@ fn collision_system(
             let overlap_y = a_min_y < b_max_y && a_max_y > b_min_y;
 
             if overlap_x && overlap_y {
-                event_writer.send(Collision(*entity_a, *entity_b));
+                event_writer.send(Collision { entity_a: *entity_a, entity_b: *entity_b });
             }
 
             commands.spawn((
@@ -147,7 +150,7 @@ fn collide_system(
 ) {
     for event in event_reader.read() {
         for (entity, mut hitbox) in query.iter_mut() {
-            if entity == event.0 || entity == event.1 {
+            if entity ==  event.entity_a || entity == event.entity_b {
                 hitbox.colliding = true;
             }
         }
@@ -161,7 +164,7 @@ fn read_event_debug_system(
 ) {
     for event in event_reader.read() {
         unsafe {
-            println!("Entity {:?} and {:?} have collided! ({})", event.0, event.1, COUNTER);
+            println!("Entity {:?} and {:?} have collided! ({})",event.entity_a, event.entity_b, COUNTER);
             COUNTER += 1;
         }
     }
