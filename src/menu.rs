@@ -24,9 +24,7 @@ enum MenuButtonAction {
 }
 
 const NORMAL_BUTTON: Color = Color::rgba(0.15, 0.15, 0.15,0.9);
-
 const BACKGROUND: Color = Color::rgba(0.15, 0.15, 0.15, 0.30);
-//const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
@@ -49,7 +47,7 @@ fn spawn_menu(
     let scale_factor_y = (window.resolution.height() / background_height) * 1.0; 
 
     
-    commands.spawn(SpriteBundle {
+    commands.spawn((SpriteBundle {
         texture: asset_server.load("../assets/menu-inicial.png"),
         transform: Transform {
             translation: Vec3::new(painel_center_x, painel_center_y, -3.0),
@@ -57,7 +55,9 @@ fn spawn_menu(
             ..default()
         },
         ..default()
-    });
+    },
+    MenuComponent,
+));
 
 
     commands.spawn((
