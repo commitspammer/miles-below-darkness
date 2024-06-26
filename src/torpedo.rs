@@ -6,6 +6,7 @@ use std::f32::consts::PI;
 use crate::hitbox::Hitbox;
 use crate::hitbox::Collision;
 use crate::enemy::Enemy;
+use crate::enemy::EnemyPositions;
 use bevy::ecs::system::{Commands, Query};
 use bevy::math::Vec3;
 use bevy::ecs::query::With;
@@ -15,8 +16,8 @@ pub struct TorpedoPlugin;
 impl Plugin for TorpedoPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, shoot_torpedo_system.run_if(in_state(GameState::Game)))
-            .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collide_system.run_if(in_state(GameState::Game)))
+            .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
             .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(2), TimerMode::Once)));
     }
 }
@@ -37,6 +38,7 @@ pub struct CounterTorpedo;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct TorpedoCooldown(Timer);
+
 
 pub fn shoot_torpedo_system(
     time: Res<Time>,
@@ -112,9 +114,6 @@ pub fn shoot_torpedo_system(
     }
 }
 
- // Substitua `your_enemy_module` pelo caminho do módulo onde `Enemy` está definido
-
-// Componentes Torpedo já definidos em torpedo.rs
 
 fn collide_system(
     mut commands: Commands,
@@ -126,7 +125,6 @@ fn collide_system(
         let entity_a = event.entity_a;
         let entity_b = event.entity_b;
 
-        // Verifica se a entidade A é um torpedo e a entidade B é um inimigo, ou vice-versa
         let torpedo_entity = if torpedo_query.get_component::<Hitbox>(entity_a).is_ok() && enemy_query.get(entity_b).is_ok() {
             Some(entity_a)
         } else if torpedo_query.get_component::<Hitbox>(entity_b).is_ok() && enemy_query.get(entity_a).is_ok() {
@@ -136,37 +134,51 @@ fn collide_system(
         };
 
         if let Some(torpedo) = torpedo_entity {
-            // Log para depuração
             println!("Torpedo colidiu com inimigo, despawnando torpedo");
-            // Despawna o torpedo
             commands.entity(torpedo).despawn();
         }
     }
 }
 
 
+
+
 fn move_torpedo_system(
     time: Res<Time>,
-    mut torpedos_query: Query<(&Torpedo, &mut Transform)>,
-    //enemy_query: Query<(Entity, &Transform), With<Enemy>>,
+    mut query: Query<(&mut Transform, &Torpedo, Option<&RegularTorpedo>, Option<&GuidedTorpedo>)>,
+    //mut torpedos_query: Query<(&Torpedo, &mut Transform)>,
+    enemy_positions: Res<EnemyPositions>,
 ) {
-    for (torpedo, mut torpedo_transform) in torpedos_query.iter_mut() {
-        // // Supondo que você queira ajustar o movimento do torpedo baseado na proximidade de um inimigo
-        // // Encontra o inimigo mais próximo
-        // if let Some((_, enemy_transform)) = enemy_query.iter().min_by(|a, b| {
-        //     let distance_a = a.1.translation.distance(torpedo_transform.translation);
-        //     let distance_b = b.1.translation.distance(torpedo_transform.translation);
-        //     distance_a.partial_cmp(&distance_b).unwrap_or(std::cmp::Ordering::Equal)
-        // }) {
-        //     // Aqui você pode ajustar o movimento do torpedo baseado na posição do inimigo mais próximo
-        //     // Exemplo: movendo o torpedo na direção do inimigo
-        //     let direction_to_enemy = (enemy_transform.translation - torpedo_transform.translation).normalize();
-        //     torpedo_transform.translation += direction_to_enemy * torpedo.movement_speed * time.delta_seconds();
-        // } else {
-            // Movimento padrão do torpedo se nenhum inimigo estiver próximo
+    for (mut torpedo_transform, torpedo, regular, guided) in query.iter_mut() {
+        if regular.is_some() {
             let up = torpedo_transform.up();
             torpedo_transform.translation += up * torpedo.movement_speed * time.delta_seconds();
-        // }
+        } else if guided.is_some() {
+            let in_range_enemies: Vec<&Vec3> = enemy_positions.positions.iter().filter(|&enemy_pos| {
+                let distance = enemy_pos.distance(torpedo_transform.translation);
+                distance <= 200.0 // Distância máxima
+            }).collect();
+
+            if let Some(closest_enemy_position) = in_range_enemies.iter().min_by(|a, b| {
+                let distance_a = a.distance(torpedo_transform.translation);
+                let distance_b = b.distance(torpedo_transform.translation);
+                distance_a.partial_cmp(&distance_b).unwrap_or(std::cmp::Ordering::Equal)
+            }) {
+                let direction_to_enemy = (**closest_enemy_position - torpedo_transform.translation).normalize();
+                torpedo_transform.translation += direction_to_enemy * torpedo.movement_speed * time.delta_seconds();
+
+                
+                let angle_to_enemy = Vec3::Y.angle_between(direction_to_enemy);
+                let axis_of_rotation = Vec3::Y.cross(direction_to_enemy).normalize_or_zero();
+                if axis_of_rotation.length_squared() > 0.0 {
+                    let rotation = Quat::from_axis_angle(axis_of_rotation, angle_to_enemy);
+                    torpedo_transform.rotation = rotation;
+                }
+            } else {
+                let up = torpedo_transform.up();
+                torpedo_transform.translation += up * torpedo.movement_speed * time.delta_seconds();
+            }
+        }
     }
 }
 

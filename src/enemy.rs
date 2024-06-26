@@ -13,8 +13,9 @@ impl Plugin for EnemyPlugin {
         app.add_systems(OnEnter(GameState::Loading), spawn_enemy)
            .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
-           .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)));
-    }
+           .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
+           .insert_resource(EnemyPositions::default());
+        }
 }
 
 #[derive(Component)]
@@ -22,6 +23,11 @@ pub struct Enemy {
     rotation_speed: f32,
     movement_speed: f32,
     destination: Vec3,
+}
+
+#[derive(Default, Resource)]
+pub struct EnemyPositions {
+    pub positions: Vec<Vec3>,
 }
 
 pub fn spawn_enemy(
@@ -119,11 +125,17 @@ fn enemy_rotation_system(
 }
 
 fn enemy_movement_system(
+    mut enemy_positions: ResMut<EnemyPositions>,
     time: Res<Time>,
     mut query: Query<(&mut Enemy, &mut Transform)>,
 ) {
+
+    enemy_positions.positions.clear();
+
+
     for (enemy, mut transform) in query.iter_mut() {
         let up = transform.up();
         transform.translation += up * enemy.movement_speed * time.delta_seconds();
+        enemy_positions.positions.push(transform.translation);
     }
 }
