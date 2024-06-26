@@ -4,18 +4,17 @@ use crate::player::Player;
 use std::time::Duration;
 use std::f32::consts::PI;
 use crate::hitbox::Hitbox;
+use crate::hitbox::InvulnerableAfterSpawn;
 use crate::hitbox::Collision;
 use crate::enemy::Enemy;
 use crate::enemy::EnemyPositions;
-use bevy::ecs::system::{Commands, Query};
-use bevy::math::Vec3;
-use bevy::ecs::query::With;
-
 
 pub struct TorpedoPlugin;
 impl Plugin for TorpedoPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, shoot_torpedo_system.run_if(in_state(GameState::Game)))
+        app.add_event::<FireRegularTorpedo>()
+            .add_systems(Update, player_shoot_torpedo_system.run_if(in_state(GameState::Game)))
+            .add_systems(Update, shoot_torpedo_event_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collide_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
             .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(2), TimerMode::Once)));
@@ -39,8 +38,13 @@ pub struct CounterTorpedo;
 #[derive(Resource, Deref, DerefMut)]
 pub struct TorpedoCooldown(Timer);
 
+#[derive(Event)]
+pub struct FireRegularTorpedo {
+    pub from: Vec2,
+    pub towards: Vec2,
+}
 
-pub fn shoot_torpedo_system(
+pub fn player_shoot_torpedo_system(
     time: Res<Time>,
     asset_server: Res<AssetServer>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -68,8 +72,9 @@ pub fn shoot_torpedo_system(
                 movement_speed: 50.0,
             },
             RegularTorpedo,
-        ))
-        .insert(Hitbox::new(10.0, 50.0));
+            Hitbox::new(10.0, 50.0),
+            InvulnerableAfterSpawn,
+        ));
         cooldown_timer.reset();
     }
     if keyboard_input.pressed(KeyCode::ShiftLeft) {
@@ -87,8 +92,9 @@ pub fn shoot_torpedo_system(
                 movement_speed: 50.0,
             },
             GuidedTorpedo,
-        ))
-        .insert(Hitbox::new(15.0, 60.0));
+            Hitbox::new(15.0, 60.0),
+            InvulnerableAfterSpawn,
+        ));
         cooldown_timer.reset();
     }
     if keyboard_input.pressed(KeyCode::ControlLeft) {
@@ -107,13 +113,44 @@ pub fn shoot_torpedo_system(
                     movement_speed: 25.0,
                 },
                 CounterTorpedo,
-            ))
-            .insert(Hitbox::new(5.0, 25.0));
+                Hitbox::new(5.0, 25.0),
+                InvulnerableAfterSpawn,
+            ));
         }
         cooldown_timer.reset();
     }
 }
 
+fn shoot_torpedo_event_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut regular_ev_reader: EventReader<FireRegularTorpedo>,
+) {
+    for (event, _) in regular_ev_reader.read_with_id() {
+        let angle = if event.towards.x < 0.0 {
+            event.towards.extend(0.0).angle_between(Vec3::Y)
+        } else {
+            (event.towards * -1.0).extend(0.0).angle_between(Vec3::Y) + PI
+        };
+        commands.spawn((
+            SpriteBundle {
+                texture: asset_server.load("../assets/torpedo-comum.png"),
+                transform: Transform {
+                    translation: event.from.extend(0.0),
+                    rotation: Quat::from_rotation_z(angle),
+                    scale: Vec3::splat(0.2),
+                },
+                ..default()
+            },
+            Torpedo {
+                movement_speed: 50.0,
+            },
+            RegularTorpedo,
+            Hitbox::new(10.0, 50.0),
+            InvulnerableAfterSpawn,
+        ));
+    }
+}
 
 fn collide_system(
     mut commands: Commands,
@@ -140,9 +177,6 @@ fn collide_system(
     }
 }
 
-
-
-
 fn move_torpedo_system(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &Torpedo, Option<&RegularTorpedo>, Option<&GuidedTorpedo>)>,
@@ -166,7 +200,6 @@ fn move_torpedo_system(
             }) {
                 let direction_to_enemy = (**closest_enemy_position - torpedo_transform.translation).normalize();
                 torpedo_transform.translation += direction_to_enemy * torpedo.movement_speed * time.delta_seconds();
-
                 
                 let angle_to_enemy = Vec3::Y.angle_between(direction_to_enemy);
                 let axis_of_rotation = Vec3::Y.cross(direction_to_enemy).normalize_or_zero();

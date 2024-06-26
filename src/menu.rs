@@ -35,7 +35,7 @@ fn spawn_menu(
 ) {
 
     let window = windows.single_mut();
-    let radius = window.resolution.height() / 2.0;
+    //let radius = window.resolution.height() / 2.0;
     let background_height = 1024.0; 
     let background_width = 1792.0;
 

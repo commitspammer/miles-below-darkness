@@ -3,8 +3,10 @@ use bevy::window::*;
 use bevy::math::bounding::RayCast2d;
 use bevy::math::bounding::BoundingCircle;
 use crate::gamestate::GameState;
+use crate::player::Player;
 use crate::sonar::Sonar;
 use crate::hitbox::Hitbox;
+use crate::torpedo::FireRegularTorpedo;
 use rand::Rng;
 
 pub struct EnemyPlugin;
@@ -14,6 +16,7 @@ impl Plugin for EnemyPlugin {
            .add_systems(Update, enemy_movement_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
+           .add_systems(Update, enemy_fire_system.run_if(in_state(GameState::Game)))
            .insert_resource(EnemyPositions::default());
         }
 }
@@ -23,11 +26,18 @@ pub struct Enemy {
     rotation_speed: f32,
     movement_speed: f32,
     destination: Vec3,
+    state: EnemyState,
 }
 
 #[derive(Default, Resource)]
 pub struct EnemyPositions {
     pub positions: Vec<Vec3>,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
+pub enum EnemyState {
+    Roaming,
+    Attacking,
 }
 
 pub fn spawn_enemy(
@@ -60,6 +70,7 @@ pub fn spawn_enemy(
                 rotation_speed: 0.4,//rng.gen_range(0.5..2.0),
                 movement_speed: 40.0,
                 destination: Vec3::ZERO, //this will be set by enemy_rotation_system()
+                state: EnemyState::Roaming,
             },
             Hitbox::new(30.0, 90.0),
         ));
@@ -77,9 +88,13 @@ fn enemy_destination_system(
 
     let mut rng = rand::thread_rng();
     for (mut enemy, transform) in enemies_query.iter_mut() {
+        if enemy.state != EnemyState::Roaming {
+            continue;
+        }
         if enemy.destination == Vec3::ZERO
             || transform.translation.distance(enemy.destination) <= 1.0
         {
+            let attack = enemy.destination != Vec3::ZERO;
             enemy.destination = loop {
                 let radian = rng.gen_range(0.0..std::f32::consts::TAU);
                 let distance = rng.gen_range(min_distance..=max_distance);
@@ -88,7 +103,6 @@ fn enemy_destination_system(
                     distance * radian.cos() + center.y,
                     transform.translation.z
                 );
-                //println!("{:?}", position);
                 let ray = RayCast2d::new(
                     transform.translation.xy(),
                     Direction2d::new((position - transform.translation).xy()).expect("BRUH"),
@@ -99,7 +113,9 @@ fn enemy_destination_system(
                     break position;
                 }
             };
-            //println!("");
+            if attack {
+                enemy.state = EnemyState::Attacking;
+            }
         }
     }
 }
@@ -107,16 +123,23 @@ fn enemy_destination_system(
 fn enemy_rotation_system(
     time: Res<Time>,
     mut query: Query<(&mut Enemy, &mut Transform)>,
+    player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
 ) {
     for (enemy, mut transform) in query.iter_mut() {
-        let to_destination = (enemy.destination.xy() - transform.translation.xy()).normalize();
+        let to_target = match enemy.state {
+            EnemyState::Roaming => (enemy.destination.xy() - transform.translation.xy()).normalize(),
+            EnemyState::Attacking => {
+                let player_transform = player_query.single();
+                (player_transform.translation.xy() - transform.translation.xy()).normalize()
+            },
+        };
         let up = transform.up().xy();
-        let up_dot = up.dot(to_destination);
+        let up_dot = up.dot(to_target);
         if (up_dot - 1.0).abs() < f32::EPSILON {
             continue;
         }
         let right = transform.right().xy();
-        let right_dot = right.dot(to_destination);
+        let right_dot = right.dot(to_target);
         let rotation_factor = -f32::copysign(1.0, right_dot);
         let max_angle = up_dot.clamp(-1.0, 1.0).acos();
         let rotation_angle = (enemy.rotation_speed * time.delta_seconds()).min(max_angle);
@@ -129,13 +152,33 @@ fn enemy_movement_system(
     time: Res<Time>,
     mut query: Query<(&mut Enemy, &mut Transform)>,
 ) {
-
     enemy_positions.positions.clear();
-
-
     for (enemy, mut transform) in query.iter_mut() {
         let up = transform.up();
-        transform.translation += up * enemy.movement_speed * time.delta_seconds();
+        transform.translation += match enemy.state {
+            EnemyState::Roaming => up * enemy.movement_speed * time.delta_seconds(),
+            EnemyState::Attacking => up * enemy.movement_speed / 2.0 * time.delta_seconds(),
+        };
         enemy_positions.positions.push(transform.translation);
+    }
+}
+
+fn enemy_fire_system(
+    mut event_writer: EventWriter<FireRegularTorpedo>,
+    mut query: Query<(&mut Enemy, &Transform)>,
+    player_query: Query<&Transform, (With<Player>, Without<Enemy>)>,
+) {
+    for (mut enemy, transform) in query.iter_mut() {
+        if enemy.state != EnemyState::Attacking {
+            continue;
+        }
+        let player_transform = player_query.single();
+        let to_target = (player_transform.translation.xy() - transform.translation.xy()).normalize();
+        let up = transform.up().xy();
+        let up_dot = up.dot(to_target);
+        if (up_dot - 1.0).abs() < f32::EPSILON {
+            event_writer.send(FireRegularTorpedo { from: transform.translation.xy(), towards: to_target });
+            enemy.state = EnemyState::Roaming;
+        }
     }
 }
