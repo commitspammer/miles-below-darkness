@@ -5,6 +5,7 @@ use bevy::math::bounding::BoundingCircle;
 use crate::gamestate::GameState;
 use crate::player::Player;
 use crate::sonar::Sonar;
+use crate::sonar::Pingable;
 use crate::hitbox::Hitbox;
 use crate::torpedo::FireRegularTorpedo;
 use rand::Rng;
@@ -73,6 +74,7 @@ pub fn spawn_enemy(
                 state: EnemyState::Roaming,
             },
             Hitbox::new(30.0, 90.0),
+            Pingable::default(),
         ));
     }
 }
