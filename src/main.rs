@@ -10,6 +10,7 @@ mod loading;
 mod pause;
 mod enemy;
 mod hitbox;
+mod gameover;
 
 fn main() {
     App::new()
@@ -33,6 +34,7 @@ fn main() {
         .add_plugins(torpedo::TorpedoPlugin)
         .add_plugins(enemy::EnemyPlugin)
         .add_plugins(hitbox::HitboxPlugin)
+        .add_plugins(gameover::GameOverPlugin)
         .run()
 }
 

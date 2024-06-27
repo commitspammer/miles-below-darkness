@@ -7,6 +7,7 @@ pub enum GameState {
     Loading,
     Game,
     Pause,
+    GameOver
 }
 
 pub fn despawn_system<T: Component>(

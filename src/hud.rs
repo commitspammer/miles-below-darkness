@@ -17,8 +17,8 @@ fn spawn_controls_sheet(
     commands.spawn((
         NodeBundle {
             style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+                width: Val::Px(300.0), // Largura da caixa
+                height: Val::Px(150.0), // Altura da caixa
                 align_items: AlignItems::Start,
                 justify_content: JustifyContent::Start,
                 padding: UiRect {
@@ -28,59 +28,19 @@ fn spawn_controls_sheet(
                 },
                 ..default()
             },
+            background_color: Color::rgb(0.0, 0.0, 0.0).into(), // Define o fundo como preto
             ..default()
         },
         HudComponent,
     )).with_children(|parent| {
-        parent.spawn((
-            NodeBundle {
-                style: Style {
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+        // Cada TextBundle agora é um filho direto do NodeBundle com fundo preto, centralizado dentro da caixa
+        parent.spawn(TextBundle::from_section(
+            "INSTRUCTIONS:\nRotate sub: A/D/<-/->\nFire regular: SPACE\nFire guided: SHIFT\nFire counter: CTRL",
+            TextStyle {
+                font_size: 20.0, // Ajuste o tamanho da fonte conforme necessário
+                color: Color::rgb(0.8, 0.0, 0.5),
                 ..default()
             },
-        )).with_children(|parent| {
-            parent.spawn((
-                TextBundle::from_section(
-                    "Rotate sub: A/D/<-/->",
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::rgb(0.8, 0.0, 0.5),
-                        ..default()
-                    },
-                ),
-            ));
-            parent.spawn((
-                TextBundle::from_section(
-                    "Fire regular: SPACE",
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::rgb(0.8, 0.0, 0.5),
-                        ..default()
-                    },
-                ),
-            ));
-            parent.spawn((
-                TextBundle::from_section(
-                    "Fire guided: SHIFT",
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::rgb(0.8, 0.0, 0.5),
-                        ..default()
-                    },
-                ),
-            ));
-            parent.spawn((
-                TextBundle::from_section(
-                    "Fire counter: CTRL",
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::rgb(0.8, 0.0, 0.5),
-                        ..default()
-                    },
-                ),
-            ));
-        });
+        ));
     });
 }
