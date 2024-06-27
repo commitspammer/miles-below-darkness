@@ -8,6 +8,7 @@ use crate::sonar::Sonar;
 use crate::sonar::Pingable;
 use crate::hitbox::Hitbox;
 use crate::torpedo::FireRegularTorpedo;
+use crate::torpedo::EnemyDamageEvent;
 use rand::Rng;
 
 pub struct EnemyPlugin;
@@ -18,6 +19,7 @@ impl Plugin for EnemyPlugin {
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_fire_system.run_if(in_state(GameState::Game)))
+           .add_systems(Update, enemy_damage_system.run_if(in_state(GameState::Game))) // Adicione esta linha
            .insert_resource(EnemyPositions::default());
         }
 }
@@ -28,6 +30,7 @@ pub struct Enemy {
     movement_speed: f32,
     destination: Vec3,
     state: EnemyState,
+    life: i32,
 }
 
 #[derive(Default, Resource)]
@@ -72,6 +75,7 @@ pub fn spawn_enemy(
                 movement_speed: 40.0,
                 destination: Vec3::ZERO, //this will be set by enemy_rotation_system()
                 state: EnemyState::Roaming,
+                life: 1,
             },
             Hitbox::new(30.0, 90.0),
             Pingable::default(),
@@ -181,6 +185,25 @@ fn enemy_fire_system(
         if (up_dot - 1.0).abs() < f32::EPSILON {
             event_writer.send(FireRegularTorpedo { from: transform.translation.xy(), towards: to_target });
             enemy.state = EnemyState::Roaming;
+        }
+    }
+}
+
+
+fn enemy_damage_system(
+    mut commands: Commands,
+    mut enemy_query: Query<(&mut Enemy, Entity)>,
+    mut damage_events: EventReader<EnemyDamageEvent>,
+    //mut game_state: ResMut<NextState<GameState>>,
+) {
+    for damage_event in damage_events.read() {
+        if let Ok((mut enemy, enemy_entity)) = enemy_query.get_mut(damage_event.entity) {
+            enemy.life -= damage_event.damage;
+            if enemy.life <= 0 {
+                // Opcional: Adicione lógica para quando o jogador morre, como despawn da entidade
+                //game_state.set(GameState::GameOver); 
+                commands.entity(enemy_entity).despawn();
+            }
         }
     }
 }
