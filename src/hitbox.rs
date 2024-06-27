@@ -6,11 +6,13 @@ pub struct HitboxPlugin;
 impl Plugin for HitboxPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<Collision>()
-            //.add_systems(Update, draw_debug_system.run_if(in_state(GameState::Game)))
-            //.add_systems(Update, read_event_debug_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, invulnerable_after_spawn_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collision_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collide_system.run_if(in_state(GameState::Game)));
+
+        #[cfg(feature = "debug")]
+        app.add_systems(Update, handle_debugbox_system.run_if(in_state(GameState::Game)));
+            //.add_systems(Update, read_event_debug_system.run_if(in_state(GameState::Game)));
     }
 }
 
@@ -138,9 +140,9 @@ impl Hitbox {
 }
 
 fn collision_system(
-    //mut commands: Commands,
-    //mut meshes: ResMut<Assets<Mesh>>,
-    //mut materials: ResMut<Assets<ColorMaterial>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut event_writer: EventWriter<Collision>,
     query: Query<(Entity, &Hitbox, &Transform), Without<InvulnerableAfterSpawn>>
 ) {
@@ -149,8 +151,11 @@ fn collision_system(
         for (entity_b, hitbox_b, transform_b) in entities.iter().skip(i + 1) {
             if Hitbox::aabb_intersects(
                 hitbox_a, transform_a, hitbox_b, transform_b,
-                //Some((&mut commands, &mut meshes, &mut materials))
-                None
+                if cfg!(feature = "debug") {
+                    Some((&mut commands, &mut meshes, &mut materials))
+                } else {
+                    None
+                }
             ) {
                 event_writer.send(Collision { entity_a: *entity_a, entity_b: *entity_b });
             }
@@ -204,29 +209,30 @@ fn collide_system(
 //    }
 //}
 
-//fn draw_debug_system(
-//    mut commands: Commands,
-//    mut meshes: ResMut<Assets<Mesh>>,
-//    mut materials: ResMut<Assets<ColorMaterial>>,
-//    hitbox_query: Query<(&Hitbox, &Transform)>,
-//    debugbox_query: Query<Entity, With<Debugbox>>,
-//) {
-//    for entity in debugbox_query.iter() {
-//        commands.entity(entity).despawn();
-//    }
-//    for (hitbox, transform) in hitbox_query.iter() {
-//        commands.spawn((
-//            MaterialMesh2dBundle {
-//                mesh: meshes.add(Rectangle::new(hitbox.width, hitbox.height)).into(),
-//                material: materials.add(if hitbox.colliding { Color::BLUE } else { Color::GREEN }),
-//                transform: Transform {
-//                    translation: transform.translation.clone(),
-//                    rotation: transform.rotation.clone(),
-//                    ..default()
-//                },
-//                ..default()
-//            },
-//            Debugbox,
-//        ));
-//    }
-//}
+#[cfg(feature = "debug")]
+fn handle_debugbox_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    hitbox_query: Query<(&Hitbox, &Transform)>,
+    debugbox_query: Query<Entity, With<Debugbox>>,
+) {
+    for entity in debugbox_query.iter() {
+        commands.entity(entity).despawn();
+    }
+    for (hitbox, transform) in hitbox_query.iter() {
+        commands.spawn((
+            MaterialMesh2dBundle {
+                mesh: meshes.add(Rectangle::new(hitbox.width, hitbox.height)).into(),
+                material: materials.add(if hitbox.colliding { Color::BLUE } else { Color::GREEN }),
+                transform: Transform {
+                    translation: transform.translation.clone(),
+                    rotation: transform.rotation.clone(),
+                    ..default()
+                },
+                ..default()
+            },
+            Debugbox,
+        ));
+    }
+}
