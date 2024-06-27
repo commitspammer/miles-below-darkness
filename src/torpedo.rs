@@ -3,6 +3,7 @@ use crate::gamestate::GameState;
 use crate::player::Player;
 use std::time::Duration;
 use std::f32::consts::PI;
+use crate::sonar::Pingable;
 use crate::hitbox::Hitbox;
 use crate::hitbox::InvulnerableAfterSpawn;
 use crate::hitbox::Collision;
@@ -91,13 +92,14 @@ pub fn player_shoot_torpedo_system(
                 ..default()
             },
             Torpedo {
-                movement_speed: 50.0,
+                movement_speed: 35.0,
                 damage: 1,
             },
             RegularTorpedo,
             PlayerTorpedo,
             Hitbox::new(10.0, 50.0),
             InvulnerableAfterSpawn,
+            Pingable::default().pinged(),
         ));
         cooldown_timer.reset();
     }
@@ -113,13 +115,14 @@ pub fn player_shoot_torpedo_system(
                 ..default()
             },
             Torpedo {
-                movement_speed: 50.0,
+                movement_speed: 35.0,
                 damage: 1,
             },
             GuidedTorpedo,
             PlayerTorpedo,
             Hitbox::new(15.0, 60.0),
             InvulnerableAfterSpawn,
+            Pingable::default().pinged(),
         ));
         cooldown_timer.reset();
     }
@@ -136,13 +139,14 @@ pub fn player_shoot_torpedo_system(
                     ..default()
                 },
                 Torpedo {
-                    movement_speed: 25.0,
+                    movement_speed: 15.0,
                     damage: 1,
                 },
                 CounterTorpedo,
                 PlayerTorpedo,
                 Hitbox::new(5.0, 25.0),
                 InvulnerableAfterSpawn,
+                Pingable::default().pinged(),
             ));
         }
         cooldown_timer.reset();
@@ -178,11 +182,10 @@ fn shoot_torpedo_event_system(
             EnemyTorpedo,
             Hitbox::new(10.0, 50.0),
             InvulnerableAfterSpawn,
+            Pingable::default(),
         ));
     }
 }
-
-
 
 fn collide_system(
     mut commands: Commands,

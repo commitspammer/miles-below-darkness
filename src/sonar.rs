@@ -34,11 +34,19 @@ pub struct Pingable {
 }
 
 impl Pingable {
+    pub fn pinged(&self) -> Pingable {
+        Pingable {
+            timer: Timer::new(self.keep, TimerMode::Once).tick(self.keep).clone(),
+            keep: self.keep,
+            fade_away: self.fade_away,
+        }
+    }
+
     pub fn default() -> Pingable {
         Pingable {
-            timer: Timer::new(Duration::from_millis(2500), TimerMode::Once),
-            keep: Duration::from_millis(500),
-            fade_away: Duration::from_millis(2000)
+            timer: Timer::new(Duration::from_millis(0), TimerMode::Once), //duration will be auto-set
+            keep: Duration::from_millis(250),
+            fade_away: Duration::from_millis(1750)
         }
     }
 }
@@ -128,8 +136,8 @@ pub fn line_spin_system(
 
 pub fn ping_system(
     mut event_reader: EventReader<Collision>,
-    mut line_query: Query<&Line>,
-    mut pingable_query: Query<(&mut Pingable, &mut Sprite)>,
+    line_query: Query<&Line>,
+    mut pingable_query: Query<&mut Pingable, With<Sprite>>,
 ) {
     for event in event_reader.read() {
         let (entity_a, entity_b) = (event.entity_a, event.entity_b);
@@ -141,8 +149,8 @@ pub fn ping_system(
             None
         };
         if let Some((l, p)) = items {
-            let Ok(line) = line_query.get(l) else { return; };
-            let Ok((mut pingable, mut sprite)) = pingable_query.get_mut(p) else { return; };
+            let Ok(_) = line_query.get(l) else { return; };
+            let Ok(mut pingable) = pingable_query.get_mut(p) else { return; };
 
             let keep = pingable.keep;
             pingable.timer.set_duration(keep);
@@ -162,14 +170,14 @@ pub fn fade_away_system(
                 pingable.timer.set_duration(fade_away);
                 pingable.timer.reset();
             }
-            sprite.color.with_a(1.0)
+            sprite.color
         } else {
             if pingable.timer.duration() == pingable.keep {
                 sprite.color.with_a(1.0)
             } else if pingable.timer.duration() == pingable.fade_away {
                 sprite.color.with_a(pingable.timer.fraction_remaining())
             } else {
-                sprite.color.with_a(0.5) //error
+                sprite.color.with_a(0.0)
             }
         };
         pingable.timer.tick(Duration::from_secs_f32(time.delta_seconds()));
