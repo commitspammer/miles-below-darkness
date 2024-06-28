@@ -1,17 +1,15 @@
 use bevy::prelude::*;
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
+use crate::gamestate::GameOverDespawnable;
 
 pub struct GameOverPlugin;
 impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::GameOver), setup_game_over)
-           .add_systems(OnExit(GameState::GameOver), despawn_system::<GameOverComponent>);
+           .add_systems(OnExit(GameState::GameOver), despawn_system::<GameOverDespawnable>);
     }
 }
-
-#[derive(Component)]
-struct GameOverComponent;
 
 fn setup_game_over(
     mut commands: Commands,

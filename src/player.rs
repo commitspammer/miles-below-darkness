@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy::window::*;
 use crate::gamestate::GameState;
+use crate::gamestate::despawn_system;
+use crate::gamestate::GameDespawnable;
 use crate::hitbox::Hitbox;
 use crate::torpedo::PlayerDamageEvent;
 
@@ -9,7 +11,8 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(GameState::Loading), spawn_player)
             .add_systems(Update, player_rotation_system.run_if(in_state(GameState::Game)))
-            .add_systems(Update, player_damage_system.run_if(in_state(GameState::Game))); // Adicione esta linha
+            .add_systems(Update, player_damage_system.run_if(in_state(GameState::Game))) // Adicione esta linha
+            .add_systems(OnEnter(GameState::Menu), despawn_system::<GameDespawnable>);
     }
 }
 
@@ -45,6 +48,7 @@ pub fn spawn_player(
             life: 3,
         },
         Hitbox::new(30.0, 95.0),
+        GameDespawnable,
     ));
 }
 

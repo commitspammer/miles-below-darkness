@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
+use crate::gamestate::MenuDespawnable;
 use bevy::window::*;
 
 pub struct MenuPlugin;
@@ -10,12 +11,9 @@ impl Plugin for MenuPlugin {
         app.add_systems(Update, button_system.run_if(in_state(GameState::Menu)))
             .add_systems(Update, menu_action.run_if(in_state(GameState::Menu)))
             .add_systems(OnEnter(GameState::Menu), spawn_menu)
-            .add_systems(OnExit(GameState::Menu), despawn_system::<MenuComponent>);
+            .add_systems(OnExit(GameState::Menu), despawn_system::<MenuDespawnable>);
     }
 }
-
-#[derive(Component)]
-struct MenuComponent;
 
 #[derive(Component)]
 enum MenuButtonAction {
@@ -56,7 +54,7 @@ fn spawn_menu(
         },
         ..default()
     },
-    MenuComponent,
+    MenuDespawnable,
 ));
 
 
@@ -72,7 +70,7 @@ fn spawn_menu(
             background_color: BACKGROUND.into(),
             ..default()
         },
-        MenuComponent,
+        MenuDespawnable,
     )).with_children(|parent| {
         parent.spawn((
             ButtonBundle {
@@ -145,6 +143,7 @@ fn menu_action(
     interaction_query: Query<(&Interaction, &MenuButtonAction), (Changed<Interaction>, With<Button>)>,
     mut app_exit_events: EventWriter<AppExit>,
     mut game_state: ResMut<NextState<GameState>>,
+    mut time: ResMut<Time<Virtual>>,
 ) {
     for (interaction, action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -154,6 +153,7 @@ fn menu_action(
                 }
                 MenuButtonAction::Play => {
                     game_state.set(GameState::Loading);
+                    time.unpause();
                 }
             }
         }

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use crate::gamestate::GameState;
+use crate::gamestate::despawn_system;
+use crate::gamestate::GameDespawnable;
 use crate::player::Player;
 use std::time::Duration;
 use std::f32::consts::PI;
@@ -21,6 +23,7 @@ impl Plugin for TorpedoPlugin {
             .add_systems(Update, shoot_torpedo_event_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collide_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
+            .add_systems(OnEnter(GameState::Menu), despawn_system::<GameDespawnable>)
             .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(2), TimerMode::Once)));
     }
 }
@@ -100,6 +103,7 @@ pub fn player_shoot_torpedo_system(
             Hitbox::new(10.0, 50.0),
             InvulnerableAfterSpawn,
             Pingable::default().pinged(),
+            GameDespawnable,
         ));
         cooldown_timer.reset();
     }
@@ -123,6 +127,7 @@ pub fn player_shoot_torpedo_system(
             Hitbox::new(15.0, 60.0),
             InvulnerableAfterSpawn,
             Pingable::default().pinged(),
+            GameDespawnable,
         ));
         cooldown_timer.reset();
     }
@@ -147,6 +152,7 @@ pub fn player_shoot_torpedo_system(
                 Hitbox::new(5.0, 25.0),
                 InvulnerableAfterSpawn,
                 Pingable::default().pinged(),
+                GameDespawnable,
             ));
         }
         cooldown_timer.reset();
@@ -183,6 +189,7 @@ fn shoot_torpedo_event_system(
             Hitbox::new(10.0, 50.0),
             InvulnerableAfterSpawn,
             Pingable::default(),
+            GameDespawnable,
         ));
     }
 }

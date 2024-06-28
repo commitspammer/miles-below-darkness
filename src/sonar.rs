@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy::window::*;
 use bevy::sprite::MaterialMesh2dBundle;
 use crate::gamestate::GameState;
+use crate::gamestate::despawn_system;
+use crate::gamestate::GameDespawnable;
 use crate::hitbox::Hitbox;
 use crate::hitbox::Collision;
 use std::time::Duration;
@@ -12,7 +14,8 @@ impl Plugin for SonarPlugin {
         app.add_systems(OnEnter(GameState::Loading), setup_sonar)
             .add_systems(Update, line_spin_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, ping_system.run_if(in_state(GameState::Game)))
-            .add_systems(Update, fade_away_system.run_if(in_state(GameState::Game)));
+            .add_systems(Update, fade_away_system.run_if(in_state(GameState::Game)))
+            .add_systems(OnEnter(GameState::Menu), despawn_system::<GameDespawnable>);
     }
 }
 
@@ -81,6 +84,7 @@ pub fn setup_sonar(
             },
             ..default()
         },
+        GameDespawnable,
     ));
     commands.spawn((
         SpriteBundle {
@@ -94,7 +98,8 @@ pub fn setup_sonar(
         },
         Sonar {
             radius: radius,
-        }
+        },
+        GameDespawnable,
     ));
     commands.spawn((
         MaterialMesh2dBundle {
@@ -107,6 +112,7 @@ pub fn setup_sonar(
             rotation_speed: 2.0,
         },
         Hitbox::new(2.0, radius),
+        GameDespawnable,
     ));
 }
 

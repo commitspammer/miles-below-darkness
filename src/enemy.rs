@@ -3,6 +3,8 @@ use bevy::window::*;
 use bevy::math::bounding::RayCast2d;
 use bevy::math::bounding::BoundingCircle;
 use crate::gamestate::GameState;
+use crate::gamestate::despawn_system;
+use crate::gamestate::GameDespawnable;
 use crate::player::Player;
 use crate::sonar::Sonar;
 use crate::sonar::Pingable;
@@ -19,7 +21,8 @@ impl Plugin for EnemyPlugin {
            .add_systems(Update, enemy_rotation_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_destination_system.run_if(in_state(GameState::Game)))
            .add_systems(Update, enemy_fire_system.run_if(in_state(GameState::Game)))
-           .add_systems(Update, enemy_damage_system.run_if(in_state(GameState::Game))) // Adicione esta linha
+           .add_systems(Update, enemy_damage_system.run_if(in_state(GameState::Game)))
+           .add_systems(OnEnter(GameState::Menu), despawn_system::<GameDespawnable>)
            .insert_resource(EnemyPositions::default());
         }
 }
@@ -67,7 +70,7 @@ pub fn spawn_enemy(
                     translation: position,
                     rotation: Quat::from_rotation_z(angle_to_player - std::f32::consts::FRAC_PI_2),
                     scale: Vec3::splat(0.1),
-                },
+                }, 
                 ..default()
             },
             Enemy {
@@ -79,6 +82,7 @@ pub fn spawn_enemy(
             },
             Hitbox::new(30.0, 90.0),
             Pingable::default(),
+            GameDespawnable,
         ));
     }
 }

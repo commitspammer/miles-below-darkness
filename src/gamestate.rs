@@ -10,6 +10,21 @@ pub enum GameState {
     GameOver
 }
 
+#[derive(Component)]
+pub struct GameDespawnable;
+
+#[derive(Component)]
+pub struct GameOverDespawnable;
+
+#[derive(Component)]
+pub struct MenuDespawnable;
+
+#[derive(Component)]
+pub struct PauseDespawnable;
+
+#[derive(Component)]
+pub struct LoadingDespawnable;
+
 pub fn despawn_system<T: Component>(
     mut commands: Commands,
     query: Query<Entity, With<T>>,

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
+use crate::gamestate::PauseDespawnable;
 
 pub struct PausePlugin;
 impl Plugin for PausePlugin {
@@ -11,12 +12,9 @@ impl Plugin for PausePlugin {
             .add_systems(Update, pause_menu_action.run_if(in_state(GameState::Pause)))
             .add_systems(Update, button_system.run_if(in_state(GameState::Pause)))
             .add_systems(OnEnter(GameState::Pause), spawn_pause_menu)
-            .add_systems(OnExit(GameState::Pause), despawn_system::<PauseComponent>);
+            .add_systems(OnExit(GameState::Pause), despawn_system::<PauseDespawnable>);
     }
 }
-
-#[derive(Component)]
-struct PauseComponent;
 
 #[derive(Component)]
 enum PauseButtonAction {
@@ -45,7 +43,7 @@ fn spawn_pause_menu(
             background_color: BACKGROUND.into(),
             ..default()
         },
-        PauseComponent,
+        PauseDespawnable,
     )).with_children(|parent| {
         parent.spawn((
             ButtonBundle {

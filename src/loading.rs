@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use iyes_progress::{prelude::*, dummy_system_wait_millis};
 use crate::gamestate::GameState;
 use crate::gamestate::despawn_system;
+use crate::gamestate::LoadingDespawnable;
 
 pub struct LoadingPlugin;
 impl Plugin for LoadingPlugin {
@@ -13,12 +14,9 @@ impl Plugin for LoadingPlugin {
                     progress_percent_system.after(TrackedProgressSet),
                 ).run_if(in_state(GameState::Loading))
             )
-            .add_systems(OnExit(GameState::Loading), despawn_system::<LoadingComponent>);
+            .add_systems(OnExit(GameState::Loading), despawn_system::<LoadingDespawnable>);
     }
 }
-
-#[derive(Component)]
-struct LoadingComponent;
 
 #[derive(Component)]
 struct ProgressPercent;
@@ -40,7 +38,7 @@ fn spawn_loading_screen(
             background_color: BACKGROUND.into(),
             ..default()
         },
-        LoadingComponent,
+        LoadingDespawnable,
     )).with_children(|parent| {
         parent.spawn((
             TextBundle::from_section(
