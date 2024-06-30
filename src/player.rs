@@ -17,6 +17,9 @@ impl Plugin for PlayerPlugin {
 }
 
 #[derive(Component)]
+pub struct PlayerHeart;
+
+#[derive(Component)]
 pub struct Player {
     rotation_speed: f32,
     rotation_acceleration: f32,
@@ -34,7 +37,7 @@ pub fn spawn_player(
     let radius = window.resolution.height() / 2.0;
     let diameter = radius * 2.0; 
     let scale = diameter / 1024.0; 
-    commands.spawn((
+    let player_entity = commands.spawn((
         SpriteBundle {
             texture: asset_server.load("../assets/submarino.png"),
             transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
@@ -49,7 +52,26 @@ pub fn spawn_player(
         },
         Hitbox::new(30.0, 95.0),
         GameDespawnable,
-    ));
+    )).id();
+
+    let heart_width_scaled = 64.0 * 2.0; // Largura do sprite na escala 2.0
+    let min_distance = 1.0; // Distância mínima desejada entre os corações
+    let total_distance = heart_width_scaled + min_distance;
+
+    // Spawn heart sprites
+    let heart_texture = asset_server.load("../assets/heart.png");
+    for i in 0..3 { // Assuming 3 lives
+        commands.spawn((
+            SpriteBundle {
+                texture: heart_texture.clone(),
+                transform: Transform::from_xyz(-600.0 + i as f32 * 50.0, 420.0, 0.0)
+                .with_scale(Vec3::splat(2.0)), // Adiciona escala ao coração // Adjust position as needed
+                ..default()
+            },
+            PlayerHeart,
+            GameDespawnable,
+        ));
+    }
 }
 
 pub fn player_rotation_system(
@@ -83,12 +105,17 @@ pub fn player_rotation_system(
 fn player_damage_system(
     mut commands: Commands,
     mut player_query: Query<(&mut Player, Entity)>,
+    mut heart_query: Query<Entity, With<PlayerHeart>>,
     mut damage_events: EventReader<PlayerDamageEvent>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     for damage_event in damage_events.read() {
         if let Ok((mut player, player_entity)) = player_query.get_mut(damage_event.entity) {
             player.life -= damage_event.damage;
+             // Despawn a heart sprite
+             if let Some(heart_entity) = heart_query.iter().next() {
+                commands.entity(heart_entity).despawn();
+            }
             if player.life <= 0 {
                 // Opcional: Adicione lógica para quando o jogador morre, como despawn da entidade
                 game_state.set(GameState::GameOver); 

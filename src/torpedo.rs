@@ -95,7 +95,7 @@ pub fn player_shoot_torpedo_system(
                 ..default()
             },
             Torpedo {
-                movement_speed: 35.0,
+                movement_speed: (35.0/2.0),
                 damage: 1,
             },
             RegularTorpedo,
@@ -119,7 +119,7 @@ pub fn player_shoot_torpedo_system(
                 ..default()
             },
             Torpedo {
-                movement_speed: 35.0,
+                movement_speed: (35.0/2.0),
                 damage: 1,
             },
             GuidedTorpedo,
@@ -144,7 +144,7 @@ pub fn player_shoot_torpedo_system(
                     ..default()
                 },
                 Torpedo {
-                    movement_speed: 15.0,
+                    movement_speed: (15.0/2.0),
                     damage: 1,
                 },
                 CounterTorpedo,
@@ -181,7 +181,7 @@ fn shoot_torpedo_event_system(
                 ..default()
             },
             Torpedo {
-                movement_speed: 50.0,
+                movement_speed: (35.0/2.0),
                 damage: 1,
             },
             RegularTorpedo,
