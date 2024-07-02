@@ -37,7 +37,8 @@ pub fn spawn_player(
     let radius = window.resolution.height() / 2.0;
     let diameter = radius * 2.0; 
     let scale = diameter / 1024.0; 
-    let player_entity = commands.spawn((
+    let lifes = if cfg!(feature = "debug") { 15 } else { 5 };
+    commands.spawn((
         SpriteBundle {
             texture: asset_server.load("../assets/submarino.png"),
             transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(0.1*scale)),
@@ -48,19 +49,19 @@ pub fn spawn_player(
             rotation_acceleration: 0.7,
             terminal_rotation_speed: 0.7,
             turbine_power: 1.5,
-            life: 3,
+            life: lifes,
         },
         Hitbox::new(30.0, 95.0),
         GameDespawnable,
-    )).id();
+    ));
 
-    let heart_width_scaled = 64.0 * 2.0; // Largura do sprite na escala 2.0
-    let min_distance = 1.0; // Distância mínima desejada entre os corações
-    let total_distance = heart_width_scaled + min_distance;
+    //let heart_width_scaled = 64.0 * 2.0; // Largura do sprite na escala 2.0
+    //let min_distance = 1.0; // Distância mínima desejada entre os corações
+    //let total_distance = heart_width_scaled + min_distance;
 
     // Spawn heart sprites
     let heart_texture = asset_server.load("../assets/heart.png");
-    for i in 0..3 { // Assuming 3 lives
+    for i in 0..lifes { // Assuming 3 lives
         commands.spawn((
             SpriteBundle {
                 texture: heart_texture.clone(),
@@ -105,7 +106,7 @@ pub fn player_rotation_system(
 fn player_damage_system(
     mut commands: Commands,
     mut player_query: Query<(&mut Player, Entity)>,
-    mut heart_query: Query<Entity, With<PlayerHeart>>,
+    heart_query: Query<Entity, With<PlayerHeart>>,
     mut damage_events: EventReader<PlayerDamageEvent>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {

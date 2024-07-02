@@ -49,7 +49,7 @@ impl Pingable {
         Pingable {
             timer: Timer::new(Duration::from_millis(0), TimerMode::Once), //duration will be auto-set
             keep: Duration::from_millis(250),
-            fade_away: Duration::from_millis(1750)
+            fade_away: Duration::from_millis(2000)
         }
     }
 }

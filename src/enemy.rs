@@ -74,8 +74,8 @@ pub fn spawn_enemy(
                 ..default()
             },
             Enemy {
-                rotation_speed: 0.4,//rng.gen_range(0.5..2.0),
-                movement_speed: 25.0,
+                rotation_speed: (0.4/1.5),//rng.gen_range(0.5..2.0),
+                movement_speed: (25.0/2.0),
                 destination: Vec3::ZERO, //this will be set by enemy_rotation_system()
                 state: EnemyState::Roaming,
                 life: 1,

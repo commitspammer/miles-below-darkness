@@ -23,6 +23,7 @@ impl Plugin for TorpedoPlugin {
             .add_systems(Update, shoot_torpedo_event_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, collide_system.run_if(in_state(GameState::Game)))
             .add_systems(Update, move_torpedo_system.run_if(in_state(GameState::Game)))
+            .add_systems(Update, move_counter_torpedo_system.run_if(in_state(GameState::Game)))
             .add_systems(OnEnter(GameState::Menu), despawn_system::<GameDespawnable>)
             .insert_resource(TorpedoCooldown(Timer::new(Duration::from_secs(2), TimerMode::Once)));
     }
@@ -201,6 +202,7 @@ fn collide_system(
     mut damage_event_writer2: EventWriter<EnemyDamageEvent>,
     torpedo_query: Query<(Entity, &Hitbox, &Torpedo), With<Torpedo>>,
     enemy_query: Query<Entity, With<Enemy>>,
+    //enemy_torpedo_query: Query<Entity, With<EnemyTorpedo>>, // Query para identificar torpedos do inimigo
     player_query: Query<Entity, With<Player>>,
     player_torpedo_query: Query<Entity, With<PlayerTorpedo>>, // Query para identificar torpedos do jogador
 ) {
@@ -220,8 +222,10 @@ fn collide_system(
         // Verifica se o torpedo colidiu com o jogador (mantém a lógica anterior)
         let torpedo_player_collision = if torpedo_query.get_component::<Hitbox>(entity_a).is_ok() && player_query.get(entity_b).is_ok() {
             Some(entity_a)
+            //enemy_torpedo_query.get(entity_a).ok().map(|_| entity_a)
         } else if torpedo_query.get_component::<Hitbox>(entity_b).is_ok() && player_query.get(entity_a).is_ok() {
             Some(entity_b)
+            //enemy_torpedo_query.get(entity_b).ok().map(|_| entity_a)
         } else {
             None
         };
@@ -255,44 +259,19 @@ fn collide_system(
     }
 }
 
-
-
 fn move_torpedo_system(
     time: Res<Time>,
     mut query: Query<(&mut Transform, &Torpedo, Option<&RegularTorpedo>, Option<&GuidedTorpedo>, Option<&CounterTorpedo>)>,
-    //enemy_torpedo_query: Query<(&Transform, &Torpedo), Without<CounterTorpedo>>, // Query para identificar torpedos inimigos
     enemy_positions: Res<EnemyPositions>,
 ) {
     for (mut torpedo_transform, torpedo, regular, guided, _counter) in query.iter_mut() {
-        // if let Some(_) = counter {
-        //     // Lógica específica para CounterTorpedo
-        //     let in_range_enemy_torpedos: Vec<&Transform> = enemy_torpedo_query.iter().filter_map(|(enemy_transform, _)| {
-        //         let distance = enemy_transform.translation.distance(torpedo_transform.translation);
-        //         if distance <= 200.0 { // Distância máxima para considerar um torpedo inimigo como alvo
-        //             Some(enemy_transform)
-        //         } else {
-        //             None
-        //         }
-        //     }).collect();
-
-        //     if let Some(closest_enemy_torpedo_transform) = in_range_enemy_torpedos.iter().min_by(|a, b| {
-        //         let distance_a = a.translation.distance(torpedo_transform.translation);
-        //         let distance_b = b.translation.distance(torpedo_transform.translation);
-        //         distance_a.partial_cmp(&distance_b).unwrap_or(std::cmp::Ordering::Equal)
-        //     }) {
-        //         let direction_to_enemy_torpedo = (closest_enemy_torpedo_transform.translation - torpedo_transform.translation).normalize();
-        //         torpedo_transform.translation += direction_to_enemy_torpedo * torpedo.movement_speed * time.delta_seconds();
-        //     } else {
-        //         // Movimentação padrão se não houver torpedos inimigos próximos
-        //         let up = torpedo_transform.up();
-        //         torpedo_transform.translation += up * torpedo.movement_speed * time.delta_seconds();
-        //     }
-        // } else if regular.is_some() {
-            if regular.is_some() {
-            // Lógica para RegularTorpedo
+        if regular.is_some()
+        {
             let up = torpedo_transform.up();
             torpedo_transform.translation += up * torpedo.movement_speed * time.delta_seconds();
-        } else if guided.is_some() {
+        }
+        else if guided.is_some()
+        {
             let in_range_enemies: Vec<&Vec3> = enemy_positions.positions.iter().filter(|&enemy_pos| {
                 let distance = enemy_pos.distance(torpedo_transform.translation);
                 distance <= 200.0 // Distância máxima
@@ -305,7 +284,6 @@ fn move_torpedo_system(
             }) {
                 let direction_to_enemy = (**closest_enemy_position - torpedo_transform.translation).normalize();
                 torpedo_transform.translation += direction_to_enemy * torpedo.movement_speed * time.delta_seconds();
-                
                 let angle_to_enemy = Vec3::Y.angle_between(direction_to_enemy);
                 let axis_of_rotation = Vec3::Y.cross(direction_to_enemy).normalize_or_zero();
                 if axis_of_rotation.length_squared() > 0.0 {
@@ -320,3 +298,37 @@ fn move_torpedo_system(
     }
 }
 
+fn move_counter_torpedo_system(
+    time: Res<Time>,
+    mut counters: Query<(&mut Transform, &Torpedo), With<CounterTorpedo>>,
+    targets: Query<(&Transform, &Torpedo), Without<CounterTorpedo>>,
+) {
+    for (mut counter_transform, counter) in counters.iter_mut() {
+        let in_range_targets: Vec<Vec3> = targets
+            .iter()
+            .map(|(t, _)| t.translation)
+            .filter(|t| {
+                let distance = t.distance(counter_transform.translation);
+                distance <= 80.0 // Distância máxima
+            })
+            .collect();
+
+        if let Some(closest_target_position) = in_range_targets.iter().min_by(|a, b| {
+            let distance_a = a.distance(counter_transform.translation);
+            let distance_b = b.distance(counter_transform.translation);
+            distance_a.partial_cmp(&distance_b).unwrap_or(std::cmp::Ordering::Equal)
+        }) {
+            let direction_to_target = (*closest_target_position - counter_transform.translation).normalize();
+            counter_transform.translation += direction_to_target * counter.movement_speed * 3.0 * time.delta_seconds();
+            let angle_to_target = Vec3::Y.angle_between(direction_to_target);
+            let axis_of_rotation = Vec3::Y.cross(direction_to_target).normalize_or_zero();
+            if axis_of_rotation.length_squared() > 0.0 {
+                let rotation = Quat::from_axis_angle(axis_of_rotation, angle_to_target);
+                counter_transform.rotation = rotation;
+            }
+        } else {
+            let up = counter_transform.up();
+            counter_transform.translation += up * counter.movement_speed * time.delta_seconds();
+        }
+    }
+}
